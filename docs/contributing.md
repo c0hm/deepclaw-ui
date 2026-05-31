@@ -17,7 +17,6 @@ Contributions to DeepClaw UI are welcome! This document provides guidelines.
 ### JavaScript
 
 - Use JavaScript ES6+ features
-- Prefer `const` over `let`
 - Use descriptive variable names
 - Comment complex logic
 
