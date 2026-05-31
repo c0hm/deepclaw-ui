@@ -1382,8 +1382,9 @@ function handleClientRequest(ws, req) {
 function connectGateway() {
   log('info', `Connecting to gateway at ${GW_URL}...`);
   
+  const originProtocol = GW_URL.startsWith('wss') ? 'https' : 'http';
   gwSocket = new WebSocket(GW_URL, {
-    headers: { 'Origin': `https://127.0.0.1:18789` },
+    headers: { 'Origin': `${originProtocol}://127.0.0.1:18789` },
     rejectUnauthorized: false
   });
   
@@ -1421,13 +1422,6 @@ function handleGatewayMessage(msg) {
     const nonce = payload.nonce;
     const ts = payload.ts;
 
-    if (!deviceIdentity) {
-      log('error', 'No device identity available, cannot authenticate');
-      gwSocket.close();
-      return;
-    }
-
-    const signedAtMs = Date.now();
     const scopes = [
       'operator.read', 'operator.write', 'operator.admin',
       'sessions.subscribe', 'sessions.unsubscribe',
@@ -1435,49 +1429,56 @@ function handleGatewayMessage(msg) {
       'sessions.send', 'sessions.reset', 'sessions.create'
     ];
 
-
-    const devicePayload = buildDeviceAuthPayloadV3({
-      deviceId: deviceIdentity.deviceId,
-      clientId: 'openclaw-control-ui',
-      clientMode: 'webchat',
-      role: 'operator',
+    const connectParams = {
+      minProtocol: 4,
+      maxProtocol: 4,
+      client: {
+        id: 'openclaw-control-ui',
+        version: '1.0.0',
+        platform: process.platform,
+        mode: 'webchat'
+      },
       scopes: scopes,
-      signedAtMs: signedAtMs,
-      token: deviceIdentity.operatorToken,
-      nonce: nonce,
-      platform: process.platform,
-      deviceFamily: ''
-    });
-    const signature = signDevicePayload(deviceIdentity.privateKeyPem, devicePayload);
-    const publicKeyBase64Url = publicKeyRawBase64UrlFromPem(deviceIdentity.publicKeyPem);
+      caps: ['tool-events', 'llm-events'],
+      auth: { token: GW_TOKEN },
+      role: 'operator',
+      userAgent: 'deepclaw-ui/1.0'
+    };
+
+    if (deviceIdentity) {
+      const signedAtMs = Date.now();
+      const devicePayload = buildDeviceAuthPayloadV3({
+        deviceId: deviceIdentity.deviceId,
+        clientId: 'openclaw-control-ui',
+        clientMode: 'webchat',
+        role: 'operator',
+        scopes: scopes,
+        signedAtMs: signedAtMs,
+        token: deviceIdentity.operatorToken,
+        nonce: nonce,
+        platform: process.platform,
+        deviceFamily: ''
+      });
+      const signature = signDevicePayload(deviceIdentity.privateKeyPem, devicePayload);
+      const publicKeyBase64Url = publicKeyRawBase64UrlFromPem(deviceIdentity.publicKeyPem);
+      connectParams.auth.deviceToken = deviceIdentity.operatorToken;
+      connectParams.device = {
+        id: deviceIdentity.deviceId,
+        publicKey: publicKeyBase64Url,
+        signature: signature,
+        signedAt: signedAtMs,
+        nonce: nonce
+      };
+    } else {
+      log('warn', 'No device identity available, using token-only auth');
+    }
 
     connectResponseId = makeId();
     gwSocket.send(JSON.stringify({
       type: 'req',
       id: connectResponseId,
       method: 'connect',
-      params: {
-        minProtocol: 4,
-        maxProtocol: 4,
-        client: {
-          id: 'openclaw-control-ui',
-          version: '1.0.0',
-          platform: process.platform,
-          mode: 'webchat'
-        },
-        scopes: scopes,
-        caps: ['tool-events', 'llm-events'],
-        auth: { token: GW_TOKEN || deviceIdentity.operatorToken, deviceToken: deviceIdentity.operatorToken },
-        role: 'operator',
-        device: {
-          id: deviceIdentity.deviceId,
-          publicKey: publicKeyBase64Url,
-          signature: signature,
-          signedAt: signedAtMs,
-          nonce: nonce
-        },
-        userAgent: 'deepclaw-ui/1.0'
-      }
+      params: connectParams
     }));
     return;
   }

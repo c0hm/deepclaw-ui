@@ -11,6 +11,8 @@ const GW_TOKEN = process.env.OPENCLAW_TOKEN || autoLoadedFromOpenclawConfig;
 
 **TLS toggle:** Set `GW_WSS=true` to use `wss://` instead of `ws://`.
 
+**Origin header:** Derived from `GW_URL` — `ws://` → `http://`, `wss://` → `https://`.
+
 ## Auth Flow
 
 ### 1. Connect → Receive Challenge
@@ -29,7 +31,7 @@ Device identity is loaded from `~/.openclaw/identity/device.json` and `device-au
 - `device.json` → `deviceId`, `publicKeyPem`, `privateKeyPem`
 - `device-auth.json` → `tokens.operator.token` (used as `operatorToken`)
 
-If identity files are missing or fields incomplete, `deviceIdentity` is `null` and auth **fails fast** — the gateway socket is closed immediately on challenge.
+If identity files are missing or fields incomplete, `deviceIdentity` is `null` and auth **falls back to token-only** — the UI connects using just `auth: { token: GW_TOKEN }` without device signing. A warning is logged: `"No device identity available, using token-only auth"`. Token-only auth requires `gateway.remote.token` in `openclaw.json` to match `gateway.auth.token`.
 
 **Payload construction** (`buildDeviceAuthPayloadV3()`):
 
@@ -84,18 +86,28 @@ const payload = [
     ],
     "caps": ["tool-events", "llm-events"],
     "auth": {
-      "token": "GW_TOKEN_VALUE",
-      "deviceToken": "operatorToken"
+      "token": "GW_TOKEN_VALUE"
     },
     "role": "operator",
-    "device": {
-      "id": "device_uuid",
-      "publicKey": "base64url_raw_ed25519_key",
-      "signature": "base64url_ed25519_sig",
-      "signedAt": 1700000000000,
-      "nonce": "challenge_nonce"
-    },
     "userAgent": "deepclaw-ui/1.0"
+  }
+}
+```
+
+**When device identity IS available**, the following additional fields are included:
+
+```json
+{
+  "auth": {
+    "token": "GW_TOKEN_VALUE",
+    "deviceToken": "operatorToken"
+  },
+  "device": {
+    "id": "device_uuid",
+    "publicKey": "base64url_raw_ed25519_key",
+    "signature": "base64url_ed25519_sig",
+    "signedAt": 1700000000000,
+    "nonce": "challenge_nonce"
   }
 }
 ```
@@ -104,8 +116,8 @@ const payload = [
 - `minProtocol`/`maxProtocol`: **4** (not 3)
 - `client.platform`: `process.platform` — runtime OS value (`linux`, `darwin`, etc.)
 - `client.mode`: `webchat`
-- `auth.token`: `GW_TOKEN` env var or auto-loaded from `openclaw.json`
-- `auth.deviceToken`: always included (set to `operatorToken` from device-auth.json)
+- `auth.token`: `GW_TOKEN` env var or auto-loaded from `openclaw.json` (always sent)
+- `auth.deviceToken`: only sent when `deviceIdentity` is non-null (set to `operatorToken` from device-auth.json)
 - `role`: `'operator'` — top-level param, not nested in `auth`
 - `device`: only sent when `deviceIdentity` is non-null; includes `id`, `publicKey`, `signature`, `signedAt`, `nonce`
 

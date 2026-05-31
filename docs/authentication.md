@@ -96,7 +96,7 @@ WebSocket connections (browser ↔ server) do **not** use HTTP Basic Auth. Auth 
 ## API Keys vs Password
 
 - **UI Password** (`DCPASS`): Protects the web UI and REST API
-- **Gateway Token** (`OPENCLAW_TOKEN`): Authenticates to OpenClaw Gateway via `auth.token` in connect params
+- **Gateway Token** (`OPENCLAW_TOKEN` or `~/.openclaw/openclaw.json`): Authenticates to OpenClaw Gateway via `auth.token` in connect params. When device identity files are missing, the UI falls back to **token-only auth** (no device signing required).
 - **Device Token** (`operatorToken`): Loaded from `device-auth.json`, sent as `auth.deviceToken` in connect params
 
 All three can be used together:
