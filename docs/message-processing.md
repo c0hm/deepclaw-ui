@@ -54,6 +54,22 @@ if (role === 'user' && textContent) {
   contextTokens, estimatedCostUsd, model, ts }
 ```
 
+### agent events (OpenClaw v2026.5.28+) → Frontend events
+
+The gateway registers deepclaw-ui as a `toolEventRecipient` when forwarding
+browser chat messages via `sessions.send`. This causes deepclaw-ui to receive
+tool events through the `agent` event (targeted to `runToolRecipients`) instead
+of `session.tool` (which excludes `runToolRecipients` from the broadcast).
+
+| Stream | Phase | Frontend Type | Notes |
+|--------|-------|---------------|-------|
+| `tool` | `start` | `tool_start` | Same extraction logic as `session.tool` |
+| `tool` | `done/result/update` | `tool_result` | Same extraction logic as `session.tool` |
+
+Non-tool agent streams (lifecycle, thinking, assistant) are intentionally
+NOT converted here — they arrive through other gateway paths (`session.tool`,
+`session.message`, `sessions.changed`) to avoid duplicates.
+
 ### Unknown events → `null` (dropped)
 
 ## parseMessageContent(content) → string

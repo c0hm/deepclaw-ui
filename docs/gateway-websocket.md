@@ -129,6 +129,7 @@ After auth success (100ms and 200ms delays respectively):
 | `session.message` | User/assistant messages | `sessionKey`, `message.{role,content}` |
 | `agent.turn` | Agent turn events | `sessionKey`, `role`, `content` |
 | `sessions.tokens` | Token updates | `sessionKey`, `tokens.{inputTokens,outputTokens,totalTokens,...}` |
+| `agent` | Agent events (v2026.5.28+) | `sessionKey`, `runId`, `stream`, `data` — tool events directed to `toolEventRecipients` |
 | `sessions.changed` | Session create/reset/end | `sessionKey`, `state` (`created`/`loaded`/`ended`/`deleted`) |
 | `connect.challenge` | Auth challenge | `nonce`, `ts` |
 

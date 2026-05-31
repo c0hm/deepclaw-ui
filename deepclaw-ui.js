@@ -414,6 +414,35 @@ function convertToFrontendEvent(rawMsg) {
   const sk = payload?.sessionKey || rawMsg.sessionKey;
   const runId = payload?.runId || rawMsg.runId || makeId();
   
+  // agent events carry tool/lifecycle/thinking/assistant streams when the
+  // gateway registers this connection as a tool event recipient (v2026.5.28+).
+  // Without this handler, tools from deepclaw-ui-initiated runs are dropped
+  // because the connection is excluded from the session.tool broadcast.
+  if (event === 'agent') {
+    const stream = payload?.stream || '';
+    if (stream === 'tool') {
+      const data = payload?.data || {};
+      const phase = data?.phase || '';
+      const toolName = data?.name || data?.tool || '';
+      const toolCallId = data?.toolCallId || '';
+      const toolInput = data?.args || data?.input || data?.arguments || payload?.args || payload?.input || {};
+      const toolResultRaw = data?.result || data?.meta || data?.output || payload?.result || payload?.meta || payload?.output || '';
+      const toolResult = typeof toolResultRaw === 'string' ? toolResultRaw : JSON.stringify(toolResultRaw);
+      const isError = data?.error || (typeof toolResult === 'string' && toolResult.startsWith('Error:'));
+
+      if (phase === 'start') {
+        return { type: 'tool_start', runId, toolName, input: toolInput, toolCallId, ts: Date.now() };
+      } else if (phase === 'done' || phase === 'result' || phase === 'update') {
+        if (toolResult || phase === 'done') {
+          return { type: 'tool_result', runId, toolName, input: toolInput, result: toolResult, isError, toolCallId, ts: Date.now() };
+        }
+      }
+    }
+    // Non-tool agent streams (lifecycle, thinking, assistant) arrive through
+    // other gateway paths — don't convert here to avoid duplicates.
+    return null;
+  }
+  
   if (event === 'session.tool') {
     const stream = payload?.stream || '';
     const data = payload?.data || {};
