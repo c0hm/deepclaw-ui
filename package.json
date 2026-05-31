@@ -1,0 +1,21 @@
+{
+  "name": "deepclaw-ui",
+  "version": "1.0.0",
+  "description": "DeepClaw UI - An alternative web interface for OpenClaw gateway traffic monitoring and session management",
+  "main": "deepclaw-ui.js",
+  "scripts": {
+    "start": "node deepclaw-ui.js",
+    "dev": "node deepclaw-ui.js"
+  },
+  "keywords": [
+    "openclaw",
+    "monitoring",
+    "traffic",
+    "ui"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^24.41.0",
+    "ws": "^8.20.0"
+  }
+}
