@@ -316,10 +316,11 @@ body{background:#1e1e2e;color:#cdd6f4;font-family:'SF Mono','Fira Code',monospac
   // Markdown - render with marked.js
   if (type.kind === 'markdown') {
     return headerHtml + `</head><body>
-<div id="bar"><span class="name">📝 ${encodedTitle}</span><span class="spacer"></span><span style="font-size:10px;color:#585b70">Markdown</span><button class="close" onclick="window.close()">✕</button></div>
+<div id="bar"><span class="name">📝 ${encodedTitle}</span><span class="spacer"></span><span style="font-size:10px;color:#585b70">Markdown</span><button class="dl" onclick="downloadFile()">⬇ Download</button><button class="close" onclick="window.close()">✕</button></div>
 <div id="main"><div id="md-view"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></` + `script>
 <script>document.getElementById('md-view').innerHTML=marked.parse(${encodedContent})</` + `script>
+<script>window.__FC__=${encodedContent};window.__FN__=${JSON.stringify(title)};function downloadFile(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([window.__FC__],{type:'application/octet-stream'}));a.download=window.__FN__;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href)}</` + `script>
 </body></html>`;
   }
 
@@ -341,7 +342,7 @@ body{background:#1e1e2e;color:#cdd6f4;font-family:'SF Mono','Fira Code',monospac
     .join('\n');
 
   return headerHtml + `</head><body>
-<div id="bar"><span class="name">📄 ${encodedTitle}</span><span class="spacer"></span><span style="font-size:10px;color:#585b70">${mode === 'null' ? 'Plain Text' : mode}</span><button class="close" onclick="window.close()">✕</button></div>
+<div id="bar"><span class="name">📄 ${encodedTitle}</span><span class="spacer"></span><span style="font-size:10px;color:#585b70">${mode === 'null' ? 'Plain Text' : mode}</span><button class="dl" onclick="downloadFile()">⬇ Download</button><button class="close" onclick="window.close()">✕</button></div>
 <div id="main"></div>
 <script src="${baseCdn}/codemirror.min.js"></` + `script>
 ${modeScriptTags}
@@ -356,6 +357,7 @@ CodeMirror(document.getElementById('main'),{
   viewportMargin:Infinity
 }).setSize('100%','100%')
 </` + `script>
+<script>window.__FC__=${encodedContent};window.__FN__=${JSON.stringify(title)};function downloadFile(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([window.__FC__],{type:'application/octet-stream'}));a.download=window.__FN__;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href)}</` + `script>
 </body></html>`;
 }
 

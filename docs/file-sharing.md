@@ -143,19 +143,20 @@ Mode scripts are loaded dynamically from CDN (`cdnjs.cloudflare.com/ajax/libs/co
 ### Viewer UI
 
 Code files display:
-- Header bar: filename, syntax badge, Download + Close buttons
+- Header bar: filename, syntax badge, Download + Close buttons (client-side Blob download from embedded content)
 - Full-height CodeMirror editor: material-darker theme, line numbers, read-only, viewport-aware rendering
 
 ## Markdown Viewer
 
 Files with `.md`/`.markdown` extension render using `marked.js` v12.0.0 from CDN. Dark-themed CSS with Catppuccin Mocha colors:
+- Header bar: filename, syntax badge, Download + Close buttons (client-side Blob download)
 - Headers in `#89b4fa`, code blocks in `#11111b`, inline code in `#f5c2e7`
 - Tables, blockquotes, lists fully styled
 - Max-width 900px centered layout
 
 ## Binary Files
 
-Binary files (detected via null-byte check) show a "Binary file — cannot preview" message with a Download button reference.
+Binary files (detected via null-byte check) show a "Binary file — cannot preview" message with a reference to use the Download button from the chat UI (previous page).
 
 ## Viewer Page HTML
 
