@@ -35,6 +35,10 @@ That's it. The server auto-connects to your Gateway at `ws://127.0.0.1:18789`, l
 
 ## 📸 What You'll See
 
+<p align="center">
+  <img src="preview.png" alt="DeepClaw UI screenshot" width="800">
+</p>
+
 | Area | What's There |
 |------|-------------|
 | **Header** | Title, sidebar toggle, connection status dot (green = gateway connected) |
