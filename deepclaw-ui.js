@@ -204,7 +204,7 @@ function detectFileType(filePath) {
   if (basename === 'makefile' || basename === 'gemfile') return { kind: 'code', mode: 'null' };
   if (ext === 'md' || ext === 'markdown') return { kind: 'markdown', mode: null };
   if (CM_MODES[ext]) return { kind: 'code', mode: CM_MODES[ext] };
-  // Try to detect if it's text — read first 1KB and check for null bytes
+  // Try to detect if it's text - read first 1KB and check for null bytes
   try {
     const fd = fs.openSync(filePath, 'r');
     const buf = Buffer.alloc(1024);
@@ -213,7 +213,7 @@ function detectFileType(filePath) {
     for (let i = 0; i < n; i++) {
       if (buf[i] === 0) return { kind: 'binary', mode: null };
     }
-    return { kind: 'code', mode: 'null' }; // text but unknown — show plain with CodeMirror
+    return { kind: 'code', mode: 'null' }; // text but unknown - show plain with CodeMirror
   } catch {
     return { kind: 'binary', mode: null };
   }
@@ -305,15 +305,15 @@ body{background:#1e1e2e;color:#cdd6f4;font-family:'SF Mono','Fira Code',monospac
 #binary-msg{display:flex;align-items:center;justify-content:center;height:100%;color:#a6adc8;font-size:14px;flex-direction:column;gap:12px}
 </style>`;
 
-  // Binary files — can't preview
+  // Binary files - can't preview
   if (type.kind === 'binary') {
     return headerHtml + `</head><body>
 <div id="bar"><span class="name">📄 ${encodedTitle}</span><span class="spacer"></span><span style="font-size:10px;color:#585b70">Binary</span><button class="close" onclick="window.close()">✕</button></div>
-<div id="main"><div id="binary-msg">⚠ Binary file — cannot preview<br><span style="font-size:11px;color:#585b70">Use the Download button on the previous page to save</span></div></div>
+<div id="main"><div id="binary-msg">⚠ Binary file - cannot preview<br><span style="font-size:11px;color:#585b70">Use the Download button on the previous page to save</span></div></div>
 </body></html>`;
   }
 
-  // Markdown — render with marked.js
+  // Markdown - render with marked.js
   if (type.kind === 'markdown') {
     return headerHtml + `</head><body>
 <div id="bar"><span class="name">📝 ${encodedTitle}</span><span class="spacer"></span><span style="font-size:10px;color:#585b70">Markdown</span><button class="close" onclick="window.close()">✕</button></div>
@@ -323,7 +323,7 @@ body{background:#1e1e2e;color:#cdd6f4;font-family:'SF Mono','Fira Code',monospac
 </body></html>`;
   }
 
-  // Code file — CodeMirror 5 with syntax highlighting
+  // Code file - CodeMirror 5 with syntax highlighting
   const mode = type.mode || 'null';
 
   // Collect unique mode scripts with dependency ordering
@@ -387,7 +387,7 @@ function getMessageSignature(msg) {
   const role = msg.role || 'user';
   const content = (msg.content || '').trim();
   if (!content) return null;
-  // Content-only hash — two messages with same role+content are duplicates
+  // Content-only hash - two messages with same role+content are duplicates
   // regardless of when they were received
   return role + '|' + hashString(content);
 }
@@ -398,7 +398,7 @@ function isDuplicateMessage(sk, msg) {
   }
   const sigs = messageSignatures.get(sk);
   const sig = getMessageSignature(msg);
-  if (!sig) return false; // empty content — don't dedup on it
+  if (!sig) return false; // empty content - don't dedup on it
   if (sigs.has(sig)) return true;
   sigs.add(sig);
   // Keep window large: after 500 entries, trim to 250 most recent
@@ -413,7 +413,7 @@ function convertToFrontendEvent(rawMsg) {
   const { event, payload } = rawMsg;
   const sk = payload?.sessionKey || rawMsg.sessionKey;
   const runId = payload?.runId || rawMsg.runId || makeId();
-  
+
   // agent events carry tool/lifecycle/thinking/assistant streams when the
   // gateway registers this connection as a tool event recipient (v2026.5.28+).
   // Without this handler, tools from deepclaw-ui-initiated runs are dropped
@@ -439,10 +439,10 @@ function convertToFrontendEvent(rawMsg) {
       }
     }
     // Non-tool agent streams (lifecycle, thinking, assistant) arrive through
-    // other gateway paths — don't convert here to avoid duplicates.
+    // other gateway paths - don't convert here to avoid duplicates.
     return null;
   }
-  
+
   if (event === 'session.tool') {
     const stream = payload?.stream || '';
     const data = payload?.data || {};
@@ -453,7 +453,7 @@ function convertToFrontendEvent(rawMsg) {
     const toolResultRaw = data?.result || data?.meta || data?.output || payload?.result || payload?.meta || payload?.output || '';
     const toolResult = typeof toolResultRaw === 'string' ? toolResultRaw : JSON.stringify(toolResultRaw);
     const isError = data?.error || (typeof toolResult === 'string' && toolResult.startsWith('Error:'));
-    
+
     if (stream === 'tool') {
       if (phase === 'start') {
         return { type: 'tool_start', runId, toolName, input: toolInput, toolCallId, ts: Date.now() };
@@ -478,26 +478,26 @@ function convertToFrontendEvent(rawMsg) {
     } else if (stream === 'assistant' || stream === 'user') {
       const text = data?.text || data?.content || '';
       if (text) {
-        if (stream === 'user') return null; // gateway echo — never persist user_text from stream
+        if (stream === 'user') return null; // gateway echo - never persist user_text from stream
         return { type: 'assistant_text', runId, text, ts: Date.now(), source: 'stream' };
       }
     }
   }
-  
+
   if (event === 'session.message') {
     const msgData = payload?.message || payload || {};
     const role = msgData?.role || 'user';
     const contentArr = msgData?.content || msgData?.text || [];
     let thinking = '';
     let textContent = '';
-    
+
     if (Array.isArray(contentArr)) {
       contentArr.forEach(block => {
         if (block?.type === 'thinking') thinking += block.thinking || '';
         if (block?.type === 'text') textContent += block.text || '';
       });
     }
-    
+
     if (role === 'assistant') {
       const tokenData = payload?.session || payload || {};
       let textContent = '';
@@ -509,10 +509,10 @@ function convertToFrontendEvent(rawMsg) {
           return '';
         }).join('\n');
       }
-      
-      const runStartEvent = { 
-        type: 'run_start', 
-        runId, 
+
+      const runStartEvent = {
+        type: 'run_start',
+        runId,
         model: msgData?.model || tokenData?.model || '',
         inputTokens: tokenData?.inputTokens || 0,
         outputTokens: tokenData?.outputTokens || 0,
@@ -522,7 +522,7 @@ function convertToFrontendEvent(rawMsg) {
         // thinking is now a separate event for consistency with streaming
         ts: Date.now()
       };
-      
+
       const events = [runStartEvent];
       // Emit thinking as a standalone event (matches streaming behavior)
       if (thinking) {
@@ -531,7 +531,7 @@ function convertToFrontendEvent(rawMsg) {
       if (textContent) {
         events.push({ type: 'assistant_text', runId, text: textContent, ts: Date.now(), source: 'message', hasToolCalls, isIntermediate: hasToolCalls || undefined });
       }
-      // Emit run_end to bookend the run (was missing — run_end rendering was dead code)
+      // Emit run_end to bookend the run (was missing - run_end rendering was dead code)
       events.push({
         type: 'run_end', runId,
         stopReason: 'end_turn',
@@ -544,22 +544,22 @@ function convertToFrontendEvent(rawMsg) {
       });
       return events;
     }
-    
+
     // Only extract text blocks, ignore metadata blocks for user messages
     if (role === 'user' && textContent) {
-      // Skip system-internal metadata messages (but NOT messages starting with [ — those can be real)
+      // Skip system-internal metadata messages (but NOT messages starting with [ - those can be real)
       if (textContent.startsWith('Sender') || textContent.startsWith('System')) {
         return null;
       }
-      // Gateway echo — never persist. The canonical user_text is stored by the
+      // Gateway echo - never persist. The canonical user_text is stored by the
       // chat handler (browser→server WS), not from gateway echoes.
       return null;
     }
   }
-  
+
   if (event === 'sessions.tokens') {
     const tokenData = payload?.tokens || payload || {};
-    return { 
+    return {
       type: 'tokens_update',
       inputTokens: tokenData?.inputTokens || 0,
       outputTokens: tokenData?.outputTokens || 0,
@@ -570,7 +570,7 @@ function convertToFrontendEvent(rawMsg) {
       ts: Date.now()
     };
   }
-  
+
   return null;
 }
 
@@ -595,12 +595,12 @@ class SessionState {
     this.lastTs = new Date();
     this.createdAt = loadedFromDisk ? null : new Date();
     this._lastMsgBroadcastCount = 0;
-    
+
     if (loadedFromDisk) {
       this.load();
     }
   }
-  
+
   _makeEventKey(ev) {
     // Build a dedup key from event type + runId + content
     const parts = [ev.type || '', ev.runId || ''];
@@ -628,13 +628,13 @@ class SessionState {
 
     this.events.push(ev);
     this.lastTs = ev.ts;
-    
+
     if (this.events.length > 2000) {
       this.events = this.events.slice(-2000);
     }
-    
+
     this.save();
-    
+
     // Push event to all browser clients in real-time
     broadcastToClients({
       type: 'event',
@@ -642,25 +642,25 @@ class SessionState {
       payload: { ...ev, sessionKey: this.key }
     });
   }
-  
+
   addMessage(msg) {
     msg.ts = msg.ts || Date.now();
     msg.id = msg.id || makeId();
     this.messages.push(msg);
-    
+
     if (this.messages.length > 500) {
       this.messages = this.messages.slice(-500);
     }
-    
+
     this.lastTs = new Date();
     this.save();
   }
-  
+
   updateTokens(tokens, broadcast = true) {
     const prevTokens = { ...this.tokens };
     this.tokens = { ...this.tokens, ...tokens };
     this.save();
-    
+
     if (broadcast) {
       broadcastToClients({
         type: 'event',
@@ -674,12 +674,12 @@ class SessionState {
       });
     }
   }
-  
+
   // Debounced save: called on every event, batches writes
   save() {
     scheduleSave(this.key, this);
   }
-  
+
   load() {
     const filePath = getSessionDataPath(this.key);
     if (fs.existsSync(filePath)) {
@@ -707,7 +707,7 @@ class SessionState {
       }
     }
   }
-  
+
   // Immediate save: for critical operations (reset, delete, shutdown)
   _doSave() {
     const filePath = getSessionDataPath(this.key);
@@ -721,7 +721,7 @@ class SessionState {
         createdAt: this.createdAt || new Date().toISOString(),
         lastTs: this.lastTs?.toISOString()
       };
-      // messageSignatures are runtime-only; do NOT persist — stale hashes
+      // messageSignatures are runtime-only; do NOT persist - stale hashes
       // cause false duplicate detection across server restarts.
       // Atomic write: write to temp file, then rename
       const tempPath = filePath + '.tmp';
@@ -731,7 +731,7 @@ class SessionState {
       log('error', `Failed to save session ${this.key}:`, e.message);
     }
   }
-  
+
   toClientFormat() {
     return {
       key: this.key,
@@ -743,7 +743,7 @@ class SessionState {
       lastTs: this.lastTs?.toISOString()
     };
   }
-  
+
   // Lightweight summary for initial connect (no events/messages arrays)
   toClientSummary() {
     return {
@@ -778,7 +778,7 @@ const HTML_PATH = path.join(__dirname, 'index.html');
 
 function handleRequest(req, res) {
   const parsedUrl = url.parse(req.url, true);
-  
+
   if (authEnabled) {
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Basic ')) {
@@ -789,12 +789,12 @@ function handleRequest(req, res) {
       res.end('401 Unauthorized');
       return;
     }
-    
+
     const base64Credentials = authHeader.split(' ')[1];
     const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
     const [username, password] = credentials.split(':');
     const validPass = DCPASS;
-    
+
     if (password !== validPass) {
       res.writeHead(401, {
         'Content-Type': 'text/plain',
@@ -804,7 +804,7 @@ function handleRequest(req, res) {
       return;
     }
   }
-  
+
   if (parsedUrl.pathname === '/' || parsedUrl.pathname === '/index.html') {
     const html = fs.readFileSync(HTML_PATH, 'utf8');
     res.writeHead(200, {
@@ -817,7 +817,7 @@ function handleRequest(req, res) {
     res.end(html);
     return;
   }
-  
+
   if (parsedUrl.pathname === '/api/sessions') {
     // Only return in-memory sessions synced from gateway (not from disk)
     const sessionsList = [];
@@ -831,12 +831,12 @@ function handleRequest(req, res) {
         lastTs: sess.lastTs?.toISOString()
       });
     });
-    
+
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
     res.end(JSON.stringify({ sessions: sessionsList }));
     return;
   }
-  
+
   // Dynamic agent list from gateway config
   if (parsedUrl.pathname === '/api/agents') {
     const agentsPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
@@ -851,12 +851,12 @@ function handleRequest(req, res) {
     }
     return;
   }
-  
+
   const resetMatch = parsedUrl.pathname.match(/^\/api\/session\/([^/]+)\/reset$/);
   if (resetMatch) {
     const sk = decodeURIComponent(resetMatch[1]);
     const reqId = makeId();
-    
+
     if (gwSocket && gwReady) {
       gwSocket.send(JSON.stringify({
         type: 'req',
@@ -865,7 +865,7 @@ function handleRequest(req, res) {
         params: { key: sk }
       }));
     }
-    
+
     if (sessions.has(sk)) {
       const sess = sessions.get(sk);
       sess.events = [];
@@ -873,17 +873,17 @@ function handleRequest(req, res) {
       sess.tokens = { inputTokens: 0, outputTokens: 0, totalTokens: 0, contextTokens: 0 };
       sess._doSave();
     }
-    
+
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
     res.end(JSON.stringify({ key: sk, reset: true }));
     return;
   }
-  
+
   const deleteMatch = parsedUrl.pathname.match(/^\/api\/session\/([^/]+)\/delete$/);
   if (deleteMatch) {
     const sk = decodeURIComponent(deleteMatch[1]);
     const reqId = makeId();
-    
+
     // Notify gateway to delete the session
     if (gwSocket && gwReady) {
       gwSocket.send(JSON.stringify({
@@ -893,21 +893,21 @@ function handleRequest(req, res) {
         params: { key: sk }
       }));
     }
-    
+
     // Cancel any pending debounced save to prevent disk file re-creation
     if (saveTimers.has(sk)) {
       clearTimeout(saveTimers.get(sk));
       saveTimers.delete(sk);
     }
-    
+
     // Remove from memory
     if (sessions.has(sk)) {
       sessions.delete(sk);
     }
-    
+
     // Track as deleted to prevent re-creation from in-flight gateway events
     deletedSessions.add(sk);
-    
+
     // Delete from disk
     const filePath = getSessionDataPath(sk);
     if (fs.existsSync(filePath)) {
@@ -918,31 +918,31 @@ function handleRequest(req, res) {
         log('error', `Failed to delete session file: ${e.message}`);
       }
     }
-    
+
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
     res.end(JSON.stringify({ key: sk, deleted: true }));
     return;
   }
-  
+
   const clearEventsMatch = parsedUrl.pathname.match(/^\/api\/session\/([^/]+)\/clear-events$/);
   if (clearEventsMatch && req.method === 'POST') {
     const sk = decodeURIComponent(clearEventsMatch[1]);
     const sess = sessions.get(sk);
-    
+
     if (!sess) {
       res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
       res.end(JSON.stringify({ error: 'Session not found', key: sk }));
       return;
     }
-    
+
     // Cancel any pending debounced save to avoid race conditions
     if (saveTimers.has(sk)) {
       clearTimeout(saveTimers.get(sk));
       saveTimers.delete(sk);
     }
-    
+
     const beforeCount = sess.events.length;
-    
+
     // Keep user_text + only final assistant_text (skip streaming, tool-call, and intermediate)
     // Uses isIntermediate/isFinal when available (post run_end), falls back to hasToolCalls + source
     const filtered = sess.events.filter(ev => {
@@ -957,7 +957,7 @@ function handleRequest(req, res) {
       if (ev.hasToolCalls) return false;           // skip tool-call messages
       return true;  // keep text-only message events (best guess for historical data)
     });
-    
+
     // If nothing would be removed (already filtered), clear everything
     if (filtered.length === beforeCount) {
       sess.events = [];
@@ -965,13 +965,13 @@ function handleRequest(req, res) {
       sess.events = filtered;
     }
     const afterCount = sess.events.length;
-    
+
     // Rebuild dedup set from remaining events
     sess._seenEventKeys = new Set();
     for (const ev of sess.events) {
       sess._seenEventKeys.add(sess._makeEventKey(ev));
     }
-    
+
     // Reset token counters (no longer meaningful after filtering)
     sess.tokens = {
       inputTokens: 0,
@@ -984,25 +984,25 @@ function handleRequest(req, res) {
       modelProvider: '',
       status: ''
     };
-    
+
     // Persist immediately
     sess._doSave();
-    
+
     // Broadcast updated session to all browser clients
     broadcastToClients({
       type: 'event',
       event: 'session.cleared',
       payload: { sessionKey: sk, eventsRemoved: beforeCount - afterCount, eventsKept: afterCount }
     });
-    
+
     const action = afterCount === 0 ? 'fully cleared' : 'filtered';
     log('info', `Cleared session ${sk} (${action}): ${beforeCount - afterCount} events removed, ${afterCount} kept`);
-    
+
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
     res.end(JSON.stringify({ key: sk, eventsRemoved: beforeCount - afterCount, eventsKept: afterCount }));
     return;
   }
-  
+
   const sessionMatch = parsedUrl.pathname.match(/^\/api\/session\/(.+)$/);
   if (sessionMatch) {
     const sk = decodeURIComponent(sessionMatch[1]);
@@ -1015,7 +1015,7 @@ function handleRequest(req, res) {
     }
     return;
   }
-  
+
   const eventsMatch = parsedUrl.pathname.match(/^\/api\/events\/(.+)$/);
   if (eventsMatch) {
     const sk = decodeURIComponent(eventsMatch[1]);
@@ -1030,7 +1030,7 @@ function handleRequest(req, res) {
     }
     return;
   }
-  
+
   // One-shot file sharing: generate a single-use download link
   if (parsedUrl.pathname === '/api/files/share' && req.method === 'POST') {
     let body = '';
@@ -1093,7 +1093,7 @@ function handleRequest(req, res) {
       return;
     }
 
-    // Consume immediately — prevents double-click re-download, browser prefetch, etc.
+    // Consume immediately - prevents double-click re-download, browser prefetch, etc.
     fileShareTokens.delete(token);
     clearTimeout(entry.timeoutHandle);
 
@@ -1172,7 +1172,7 @@ function handleRequest(req, res) {
     }));
     return;
   }
-  
+
   res.writeHead(404);
   res.end('Not found');
 }
@@ -1201,7 +1201,7 @@ wss.on('connection', (ws, req) => {
   ws.id = clientId;
   clients.add(ws);
   log('info', `Browser client connected: ${clientId} (total: ${clients.size})`);
-  
+
   ws.send(JSON.stringify({
     type: 'event',
     event: 'status',
@@ -1212,7 +1212,7 @@ wss.on('connection', (ws, req) => {
       ts: Date.now()
     }
   }));
-  
+
   sessions.forEach((sess, sk) => {
     log('info', `Syncing session ${sk} to client ${clientId}: ${sess.events.length} events, ${sess.messages.length} messages`);
     ws.send(JSON.stringify({
@@ -1221,7 +1221,7 @@ wss.on('connection', (ws, req) => {
       payload: sess.toClientFormat()
     }));
   });
-  
+
   ws.on('message', (msg) => {
     try {
       const data = JSON.parse(msg);
@@ -1233,10 +1233,10 @@ wss.on('connection', (ws, req) => {
         const sk = data.sessionKey || 'agent:main:main';
         const chatMsg = data.message;
         const chatReqId = makeId();
-        
+
         chatRequests.set(chatReqId, { ws, sessionKey: sk });
-        
-        // Create canonical user_text event — the single source of truth.
+
+        // Create canonical user_text event - the single source of truth.
         // gateway echoes are silenced in convertToFrontendEvent.
         const session = getSession(sk);
         session.addEvent({
@@ -1246,7 +1246,7 @@ wss.on('connection', (ws, req) => {
           ts: new Date(),
           source: 'canonical'
         });
-        
+
         if (gwSocket && gwReady) {
           gwSocket.send(JSON.stringify({
             type: 'req',
@@ -1255,7 +1255,7 @@ wss.on('connection', (ws, req) => {
             params: { key: sk, message: chatMsg }
           }));
           log('info', `Forwarded chat to ${sk}: ${chatMsg.substring(0, 50)}...`);
-          
+
           // Phase 4: Send immediate acknowledgment to browser
           ws.send(JSON.stringify({
             type: 'chat_ack',
@@ -1271,7 +1271,7 @@ wss.on('connection', (ws, req) => {
       log('error', 'Failed to parse client message:', e.message);
     }
   });
-  
+
   ws.on('close', () => {
     clients.delete(ws);
     // Clean up any pending chat requests from this client
@@ -1285,7 +1285,7 @@ wss.on('connection', (ws, req) => {
 function handleClientRequest(ws, req) {
   const { method, params, id } = req;
   let response = { type: 'res', id, ok: true };
-  
+
   if (method === 'sessions.list') {
     const list = [];
     sessions.forEach((sess, sk) => {
@@ -1323,7 +1323,7 @@ function handleClientRequest(ws, req) {
     const sk = params.key || 'agent:main:main';
     const reason = params.reason || 'new';
     const reqId = makeId();
-    
+
     if (gwSocket && gwReady) {
       gwSocket.send(JSON.stringify({
         type: 'req',
@@ -1332,7 +1332,7 @@ function handleClientRequest(ws, req) {
         params: { key: sk, reason }
       }));
     }
-    
+
     if (sessions.has(sk)) {
       const sess = sessions.get(sk);
       sess.events = [];
@@ -1340,12 +1340,12 @@ function handleClientRequest(ws, req) {
       sess.tokens = { inputTokens: 0, outputTokens: 0, totalTokens: 0, contextTokens: 0 };
       sess._doSave();
     }
-    
+
     response.payload = { key: sk, reset: true };
   } else if (method === 'sessions.create') {
     const reqId = makeId();
     const sessionKey = params.key || 'agent:main:main';
-    
+
     if (gwSocket && gwReady) {
       gwSocket.send(JSON.stringify({
         type: 'req',
@@ -1354,12 +1354,12 @@ function handleClientRequest(ws, req) {
         params: { key: sessionKey }
       }));
     }
-    
+
     response.payload = { key: sessionKey, created: true };
   } else if (method === 'sessions.abort') {
     const sk = params.key || 'agent:main:main';
     const reqId = makeId();
-    
+
     if (gwSocket && gwReady) {
       gwSocket.send(JSON.stringify({
         type: 'req',
@@ -1369,29 +1369,29 @@ function handleClientRequest(ws, req) {
       }));
       log('info', `Abort requested for session: ${sk}`);
     }
-    
+
     response.payload = { key: sk, aborted: true };
   } else {
     response.ok = false;
     response.error = { code: 'METHOD_NOT_FOUND', message: method };
   }
-  
+
   ws.send(JSON.stringify(response));
 }
 
 function connectGateway() {
   log('info', `Connecting to gateway at ${GW_URL}...`);
-  
+
   const originProtocol = GW_URL.startsWith('wss') ? 'https' : 'http';
   gwSocket = new WebSocket(GW_URL, {
     headers: { 'Origin': `${originProtocol}://127.0.0.1:18789` },
     rejectUnauthorized: false
   });
-  
+
   gwSocket.on('open', () => {
     log('info', 'Gateway connected, awaiting challenge...');
   });
-  
+
   gwSocket.on('message', (data) => {
     try {
       const msg = JSON.parse(data.toString());
@@ -1400,7 +1400,7 @@ function connectGateway() {
       log('error', 'Failed to parse gateway message:', err.message);
     }
   });
-  
+
   gwSocket.on('close', (code, reason) => {
     log('warn', `Gateway disconnected (${code}): ${reason}`);
     gwReady = false;
@@ -1409,7 +1409,7 @@ function connectGateway() {
     broadcastToClients({ type: 'event', event: 'gateway.disconnected', payload: { code, reason: reason.toString() } });
     setTimeout(connectGateway, 3000);
   });
-  
+
   gwSocket.on('error', (err) => {
     log('error', 'Gateway socket error:', err.message);
   });
@@ -1417,7 +1417,7 @@ function connectGateway() {
 
 function handleGatewayMessage(msg) {
   const { type, event, id, payload } = msg;
-  
+
   if (type === 'event' && event === 'connect.challenge') {
     const nonce = payload.nonce;
     const ts = payload.ts;
@@ -1482,14 +1482,14 @@ function handleGatewayMessage(msg) {
     }));
     return;
   }
-  
+
   if (type === 'res' && id === connectResponseId) {
     if (msg.ok) {
       log('info', 'Gateway auth successful');
       gwReady = true;
       deletedSessions.clear(); // Reset deletion tracking on fresh gateway connection
       broadcastToClients({ type: 'event', event: 'gateway.connected', payload: { ts: Date.now() } });
-      
+
       setTimeout(() => {
         pendingSubId = makeId();
         gwSocket.send(JSON.stringify({
@@ -1499,7 +1499,7 @@ function handleGatewayMessage(msg) {
           params: {}
         }));
       }, 100);
-      
+
       setTimeout(() => {
         const listId = makeId();
         gwSocket.send(JSON.stringify({
@@ -1514,19 +1514,19 @@ function handleGatewayMessage(msg) {
     }
     return;
   }
-  
+
   if (type === 'res' && id === pendingSubId) {
     log('info', 'Sessions subscribed');
     pendingSubId = null;
     return;
   }
-  
+
   if (type === 'res' && chatRequests.has(id)) {
     const entry = chatRequests.get(id);
     const clientWs = entry.ws;
     const sk = entry.sessionKey;
     log('info', 'Chat response:', msg.ok ? 'ok' : JSON.stringify(msg.error || msg));
-    
+
     // Phase 4: Forward delivery confirmation to browser
     if (clientWs && clientWs.readyState === WebSocket.OPEN) {
       clientWs.send(JSON.stringify({
@@ -1536,11 +1536,11 @@ function handleGatewayMessage(msg) {
         ts: Date.now()
       }));
     }
-    
+
     chatRequests.delete(id);
     return;
   }
-  
+
   function calculateActualContext(events) {
     if (!events || events.length === 0) return 0;
     let totalChars = 0;
@@ -1552,10 +1552,10 @@ function handleGatewayMessage(msg) {
     });
     return Math.ceil(totalChars / 4);
   }
-  
+
   if (type === 'res' && payload?.sessions) {
     const gatewaySessionKeys = new Set(payload.sessions.map(s => s.key));
-    
+
     // Remove sessions that no longer exist on gateway
     sessions.forEach((sess, sk) => {
       if (!gatewaySessionKeys.has(sk)) {
@@ -1577,21 +1577,21 @@ function handleGatewayMessage(msg) {
         });
       }
     });
-    
+
     payload.sessions.forEach(sess => {
       const sk = sess.key;
-      // Skip sessions the user explicitly deleted — the gateway may not have
+      // Skip sessions the user explicitly deleted - the gateway may not have
       // processed the deletion yet. Marker cleared on reconnect or when a
       // genuine sessions.changed (state='created') arrives.
       if (deletedSessions.has(sk)) return;
       deletedSessions.delete(sk);
       const session = getSession(sk);
       session.sessionId = sess.sessionId || '';
-      
+
       const actualContext = calculateActualContext(session.events);
       const gatewayContext = sess.contextTokens || 0;
       const finalContext = actualContext > 0 ? actualContext : gatewayContext;
-      
+
       session.updateTokens({
         inputTokens: sess.inputTokens || 0,
         outputTokens: sess.outputTokens || 0,
@@ -1603,15 +1603,15 @@ function handleGatewayMessage(msg) {
         modelProvider: sess.modelProvider || '',
         status: sess.status || ''
       });
-      
+
       log('info', `Session ${sk}: tokens=${session.tokens.totalTokens}, context=${finalContext} (gateway=${gatewayContext})`);
     });
     return;
   }
-  
+
   if (type === 'event' || type === 'broadcast') {
     const eventName = event || msg.name;
-    
+
     // Handle session deletion BEFORE forwarding to clients or re-creating state.
     // Otherwise getSession(sk) re-creates a just-deleted session.
     if (eventName === 'sessions.changed') {
@@ -1636,9 +1636,9 @@ function handleGatewayMessage(msg) {
         return;
       }
     }
-    
+
     broadcastToClients(msg);
-    
+
     const sk = payload?.sessionKey || msg.sessionKey || payload?.session?.key;
     if (sk) {
       // Don't re-create state for deleted sessions from in-flight gateway events
@@ -1655,7 +1655,7 @@ function handleGatewayMessage(msg) {
         }
       }
       const session = getSession(sk);
-      
+
       const converted = convertToFrontendEvent(msg);
       if (converted) {
         const events = Array.isArray(converted) ? converted : [converted];
@@ -1665,7 +1665,7 @@ function handleGatewayMessage(msg) {
           ev.sessionKey = sk;
           ev.ts = Date.now();
           session.addEvent(ev);
-          
+
           // Also update SessionState tokens when run_start includes token data
           if (ev.type === 'run_start' && ev.totalTokens) {
             session.updateTokens({
@@ -1677,13 +1677,13 @@ function handleGatewayMessage(msg) {
               model: ev.model
             }, false); // Don't re-broadcast, already done via addEvent
           }
-          
+
           if (ev.type === 'run_end' && ev.runId) {
             hasRunEnd = true;
             runEndRunId = ev.runId;
           }
         });
-        
+
         // When run_end arrives, mark the last assistant_text for this runId as final,
         // and earlier assistant_text events as intermediate
         if (hasRunEnd && runEndRunId) {
@@ -1704,10 +1704,10 @@ function handleGatewayMessage(msg) {
           // If no assistant_text was found (e.g. tool-only run), that's fine
         }
       }
-      // Raw events that didn't convert are silently dropped — they're
+      // Raw events that didn't convert are silently dropped - they're
       // internal plumbing (agent, chat, sessions.changed, heartbeat, etc.)
       // that don't belong in the display events array.
-      
+
       if (eventName === 'session.tool' || eventName === 'sessions.tokens') {
         const tokens = payload?.tokens || payload?.session || payload;
         if (tokens?.totalTokens !== undefined) {
@@ -1717,9 +1717,9 @@ function handleGatewayMessage(msg) {
           session.updateTokens({ ...tokens, contextTokens: finalCtx });
         }
       }
-      
+
       if ((eventName === 'session.message' || eventName === 'agent.turn') && payload) {
-        let rawContent = payload.content || payload.text || 
+        let rawContent = payload.content || payload.text ||
                      payload.message?.content || payload.message?.text || '';
         if (!rawContent && payload.message) {
           rawContent = payload.message.content || payload.message.text || '';
@@ -1727,16 +1727,16 @@ function handleGatewayMessage(msg) {
         // Parse and extract clean text BEFORE storing
         const content = parseMessageContent(rawContent);
         const role = payload.role || payload.message?.role || (eventName === 'agent.turn' ? 'assistant' : 'user');
-        
+
         if (content && content.length > 0) {
           const msg = {
             role: role,
             content: content, // Store PARSED text, not raw JSON
             ts: Date.now()
           };
-          
+
           // Filter out metadata garbage before storing
-          // NOTE: removed ^\[ — real messages can start with brackets (e.g. "[important] ...")
+          // NOTE: removed ^\[ - real messages can start with brackets (e.g. "[important] ...")
           const isMetadataGarbage = /^(Sender|System|\[Mon|\[Tue|\[Wed)/.test(content);
           if (isMetadataGarbage) {
             log('info', `Skipping metadata garbage for ${sk}: ${content.slice(0, 50)}`);
@@ -1744,12 +1744,12 @@ function handleGatewayMessage(msg) {
             log('info', `Skipping duplicate message for ${sk}`);
           } else {
             session.addMessage(msg);
-            
+
             // Send only the new message delta, not the entire array
             const startIdx = session._lastMsgBroadcastCount || 0;
             const newMsgs = session.messages.slice(startIdx);
             session._lastMsgBroadcastCount = session.messages.length;
-            
+
             broadcastToClients({
               type: 'event',
               event: 'session.messages',
@@ -1764,22 +1764,22 @@ function handleGatewayMessage(msg) {
         }
       }
     }
-    
+
     if (eventName === 'sessions.changed') {
       const phase = payload?.phase || '';
       const state = payload?.state || '';
-      
+
       // Only reset for NEW sessions (state='created'), not for existing sessions being loaded
       // Use sessions.get(sk) because the 'session' variable is scoped inside the if(sk) block above
       if (state === 'created' || phase === 'created') {
         deletedSessions.delete(sk); // Gateway explicitly creates this session
         log('info', `Creating new session: ${sk}`);
-        
+
         const sess = sessions.get(sk);
         if (sess) {
           sess.events = [];
           sess.messages = [];
-          
+
           sess.tokens = {
             inputTokens: 0,
             outputTokens: 0,
@@ -1791,11 +1791,11 @@ function handleGatewayMessage(msg) {
             modelProvider: '',
             status: ''
           };
-          
+
           // Persist the cleared state to disk so it doesn't leak on restart
           sess._doSave();
         }
-        
+
         const filePath = getSessionDataPath(sk);
         if (fs.existsSync(filePath)) {
           try {
@@ -1806,7 +1806,7 @@ function handleGatewayMessage(msg) {
           }
         }
       }
-      
+
       log('info', `SESSION CHANGED: ${sk}`);
     }
   }
@@ -1816,7 +1816,7 @@ process.stdin.resume();
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (line) => {
   const cmd = line.trim().toLowerCase();
-  
+
   if (cmd === 'status') {
     console.log('\n=== DeepClaw UI v2 Status ===');
     console.log('Gateway:', gwReady ? 'connected' : 'disconnected');
@@ -1854,8 +1854,8 @@ process.stdin.on('data', (line) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  const ip = require('os').networkInterfaces()['eth0']?.[0]?.address || 
-             require('os').networkInterfaces()['wlan0']?.[0]?.address || 
+  const ip = require('os').networkInterfaces()['eth0']?.[0]?.address ||
+             require('os').networkInterfaces()['wlan0']?.[0]?.address ||
              'localhost';
   const protocol = certs ? 'https' : 'http';
   log('info', `DeepClaw UI v2 running at ${protocol}://0.0.0.0:${PORT}/`);

@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f1117">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1117'/%3E%3Cpath d='M16 28 C8 20,6 10,10 5' fill='none' stroke='%236366f1' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M16 28 C24 20,26 10,22 5' fill='none' stroke='%236366f1' stroke-width='2.5' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='26' r='2.5' fill='%236366f1'/%3E%3C/svg%3E">
 <title>DeepClaw-UI v1.1</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,7 +24,7 @@
   html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
   body { display: flex; flex-direction: column; }
 
-  #header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  #header { background: var(--panel); border-top: 3px solid var(--accent); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
   #header h1 { font-size: 14px; font-weight: 600; color: var(--accent); white-space: nowrap; flex-shrink: 0; cursor: pointer; }
   #status { display: flex; align-items: center; gap: 8px; font-size: 11px; min-width: 0; overflow: hidden; }
   #status span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -536,7 +538,91 @@ loadPrefs();
     if (sidebar) sidebar.classList.add('collapsed');
     if (btn) btn.textContent = '›';
   }
+  // restore agent-specific theme from last active session
+  if (_lastActiveSession) {
+    var agentName = getAgentName(_lastActiveSession);
+    if (agentName) applyAgentTheme(agentName);
+  }
 })();
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Section 2b: Agent-Specific Theme
+   Each agent gets a deterministic accent hue (225-255°) stored in localStorage.
+   Applied via --accent CSS variable override on session switch.
+   ────────────────────────────────────────────────────────────────────────── */
+const _AGENT_THEMES_KEY = 'deepclaw-ui-agent-themes';
+
+/** djb2 hash — simple, deterministic, JS-friendly */
+function hashAgentName(name) {
+  let hash = 5381;
+  for (let i = 0; i < name.length; i++) hash = ((hash << 5) + hash + name.charCodeAt(i)) | 0;
+  return Math.abs(hash);
+}
+
+/** Map agent name hash → hue 0-360° (used as fallback for the first agent) */
+function agentHueFromName(name) {
+  return hashAgentName(name) % 360;
+}
+
+function loadAgentThemes() {
+  try {
+    return JSON.parse(localStorage.getItem(_AGENT_THEMES_KEY)) || {};
+  } catch { return {}; }
+}
+
+function saveAgentThemes(themes) {
+  try { localStorage.setItem(_AGENT_THEMES_KEY, JSON.stringify(themes)); } catch { /* quota or disabled */ }
+}
+
+/** Extract agent name from session key (e.g. "agent:main:main" → "main") */
+function getAgentName(sk) {
+  if (!sk || typeof sk !== 'string') return null;
+  const parts = sk.split(':');
+  if (parts.length < 2) return null;
+  // Handle "agent:name:instance" format
+  if (parts[0] === 'agent') return parts[1];
+  // Handle "name:instance" or other formats — use first segment as fallback
+  return parts[0];
+}
+
+/** Get or generate the accent hue for an agent — greedy: pick the most isolated spot on the wheel */
+function getOrCreateAgentTheme(agentName) {
+  const themes = loadAgentThemes();
+  if (themes[agentName]) return themes[agentName];
+
+  const used = Object.values(themes).map(function(t) { return t.hue; });
+
+  var bestHue = agentHueFromName(agentName);
+  if (used.length > 0) {
+    var bestDist = -1;
+    for (var h = 0; h < 360; h += 5) {
+      var minDist = 360;
+      for (var i = 0; i < used.length; i++) {
+        var d = Math.abs(h - used[i]);
+        var dist = d > 180 ? 360 - d : d;
+        if (dist < minDist) minDist = dist;
+        if (minDist <= bestDist) break;
+      }
+      if (minDist > bestDist) { bestDist = minDist; bestHue = h; }
+    }
+  }
+
+  themes[agentName] = { hue: bestHue };
+  saveAgentThemes(themes);
+  return { hue: bestHue };
+}
+
+/** Apply agent accent to --accent CSS variable */
+function applyAgentTheme(agentName) {
+  if (!agentName) { clearAgentTheme(); return; }
+  const theme = getOrCreateAgentTheme(agentName);
+  document.documentElement.style.setProperty('--accent', 'hsl(' + theme.hue + ', 84%, 65%)');
+}
+
+/** Remove agent-specific override, revert to default :root accent */
+function clearAgentTheme() {
+  document.documentElement.style.removeProperty('--accent');
+}
 
 /* ──────────────────────────────────────────────────────────────────────────
    Section 3: rAF Throttle - coalesce rapid updateUI() calls into one per frame
@@ -770,6 +856,7 @@ function handleGatewayMsg(msg) {
       if (sessions.has(sk)) sessions.delete(sk);
       if (activeSession === sk) {
         activeSession = null;
+        clearAgentTheme();
         _lastActiveSession = null;
         savePrefs();
         document.getElementById('chat-input').value = '';
@@ -1423,6 +1510,7 @@ function updateUI(forceList, forceContent) {
       '</div>';
     document.getElementById('content-title').innerHTML = 'Select a session to view traffic';
     activeSession = null;
+    clearAgentTheme();
   } else {
     document.getElementById('messages').innerHTML = '<div class="no-session">Waiting for traffic...</div>';
   }
@@ -1498,6 +1586,7 @@ function showSession(sk) {
   activeSession = sk;
   _lastActiveSession = sk;
   savePrefs();
+  applyAgentTheme(getAgentName(sk));
 
   // Phase 3: Reset pending state on session switch
   clearPendingState();
@@ -3062,6 +3151,7 @@ function deleteSession(sk) {
       deletedSessions.add(sk);
       if (activeSession === sk) {
         activeSession = null;
+        clearAgentTheme();
         _lastActiveSession = null;
         savePrefs();
         document.getElementById('chat-input').value = '';
@@ -3156,7 +3246,10 @@ function createNewSession() {
   }
 
   activeSession = sessionKey;
+  _lastActiveSession = sessionKey;
+  savePrefs();
   _lastEventCount = -1;
+  applyAgentTheme(getAgentName(sessionKey));
 
   document.getElementById('chat-input').value = '';
 
@@ -3188,6 +3281,7 @@ function createNewSession() {
         sess._failed = true;
         if (activeSession === sessionKey) {
           activeSession = null;
+          clearAgentTheme();
         }
       }
       closeNewSessionModal();
