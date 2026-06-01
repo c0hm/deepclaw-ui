@@ -2,11 +2,9 @@
 
 This file tracks all tasks, features, and changes made to the DeepClaw UI project.
 
-## Planned Tasks
-
-_(none)_
-
 ## Completed Tasks
+
+- **[side-by-side-diff-for-edit-results](side-by-side-diff-for-edit-results.md)** (2026-06-01) — Replaced CSS Grid side-by-side diff with clean single-column unified diff for edit results. Removed `parseUnifiedPatch()` + `renderSideBySideDiff()`, added `renderUnifiedDiff()`.
 
 - **[fix-new-session-optimistic-stuck](fix-new-session-optimistic-stuck.md)** (2026-06-01) — Fixed new session sidebar stuck in "Creating..." status after modal creation. Sidebar was not re-rendering when `sessions.changed` cleared the optimistic flag.
 - **[dynamic-agent-list-in-modal](dynamic-agent-list-in-modal.md)** (2026-06-01) — Replaced hardcoded agent dropdown in "Start New Session" modal with dynamic list fetched from `/api/agents`. Backend now returns `sessionKey` for each agent; frontend caches list on WS open and populates on modal open.

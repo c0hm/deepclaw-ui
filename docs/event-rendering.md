@@ -224,9 +224,21 @@ All produce a **`.tr-wrap`** container with:
 - **Error detection:** `ev.isError`, `parsed.isError`, error in details, or text starts with Error/Failed/✖/⚠
 - **Header:** OK/ERROR tag + file link + truncated detail (120 chars)
 - **On error:** Red error box with "✖ Edit Failed", error text, file path
-- **On success:** ✅ text, edit blocks rendered as `.mem-card` cards (old ↓ red, new ↑ green, max 5 lines prev each)
-- **Diff block:** rendered via `renderDiff()` if `d.diff` present
+- **On success (patch present):** Unified diff via `renderUnifiedDiff()` — single-column, line-by-line: removed lines in red, added lines in green, context lines in default text color, hunk headers as divider rows.
+- **On success (edits, no patch):** Fallback to `.mem-card` cards (old ↓ red, new ↑ green, max 5 lines prev each)
+- **On success (diff, no patch/edits):** Fallback to `renderDiff()` unified diff
 - **Actions:** Copy + JSON
+
+##### Unified diff helper
+
+**`renderUnifiedDiff(patchText, filePath)`** — Simple single-column line-by-line renderer:
+- `.udiff` → container (bordered, scrollable at 60vh, monospace)
+- `.udiff-file` → file path bar (optional, shown when filePath provided)
+- `.udiff-hunk` → hunk header row (info-colored, dark background)
+- `.udiff-rem` → removed lines (red background + red text)
+- `.udiff-add` → added lines (green background + green text)
+- `.udiff-ctx` → context lines (default text color)
+- Skips git diff boilerplate (`diff --git`, `index`, `---`, `+++`) and `\ No newline` markers
 
 #### `renderWriteHeader(ev, parsed, t, idx, expanded)`
 - **Looks up** matching `tool_start` for `filePath`

@@ -178,6 +178,16 @@
   .diff-add { background: rgba(34,197,94,0.12); color: #4ade80; }
   .diff-rem { background: rgba(239,68,68,0.12); color: #f87171; }
   .diff-hdr { color: var(--info); font-weight: 600; }
+
+  /* ── Unified diff viewer (single column) ──────────────────── */
+  .udiff { margin: 8px 0; border: 1px solid var(--border); border-radius: 6px; overflow-y: auto; font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.5; max-height: 60vh; }
+  .udiff-file { padding: 6px 10px; background: #1a1d2e; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  .udiff-file span { color: var(--info); }
+  .udiff-hunk { padding: 4px 10px; background: #1e2130; color: var(--info); font-size: 10px; border-bottom: 1px solid var(--border); }
+  .udiff-rem { padding: 1px 10px; background: rgba(239,68,68,0.08); color: #fca5a5; white-space: pre-wrap; overflow-wrap: break-word; font-family: inherit; }
+  .udiff-add { padding: 1px 10px; background: rgba(34,197,94,0.08); color: #86efac; white-space: pre-wrap; overflow-wrap: break-word; font-family: inherit; }
+  .udiff-ctx { padding: 1px 10px; color: var(--text); white-space: pre-wrap; overflow-wrap: break-word; font-family: inherit; }
+
   .syn-kw  { color: #c084fc; }
   .syn-str { color: #4ade80; }
   .syn-cmt { color: #71717a; font-style: italic; }
@@ -485,7 +495,7 @@ let userScrolledUp = false;
 let pendingNewMessages = 0;
 let sessionEvents = [];
 let filtersVisible = false;
-let _expandedItems = new Set(['user', 'response']); // item keys to always show expanded (tool names + 'user','response','thinking','tool_results','run_start')
+let _expandedItems = new Set(['user', 'response', 'edit', 'update_plan']); // item keys to always show expanded (tool names + 'user','response','thinking')
 let _pendingRequest = false; // Phase 3: true between Send and response end
 let _pendingSentMsg = null; // Phase 1: text of last sent message for optimistic matching
 let _lastSentSessionKey = null; // Phase 1: session key where message was sent
@@ -2073,6 +2083,40 @@ function renderCodeBlock(text, lang, lineNumbers) {
   return '<div class="' + cls + '">' + hl + '</div>';
 }
 
+/* ── Unified Diff: simple single-column renderer ──────────────────────── */
+function renderUnifiedDiff(patchText, filePath) {
+  if (!patchText) return '';
+  const lines = patchText.split('\n');
+  let html = '<div class="udiff">';
+
+  if (filePath) {
+    html += '<div class="udiff-file"><span>📄</span> ' + escHtml(filePath) + '</div>';
+  }
+
+  for (var li = 0; li < lines.length; li++) {
+    var line = lines[li];
+
+    // Skip git diff boilerplate headers
+    if (line.startsWith('diff --git') || line.startsWith('index ') ||
+        line.startsWith('--- ') || line.startsWith('+++ ') ||
+        /^(---|\+\+\+)\s*$/.test(line)) continue;
+    if (line === '\\ No newline at end of file') continue;
+
+    if (line.startsWith('@@')) {
+      html += '<div class="udiff-hunk">' + escHtml(line) + '</div>';
+    } else if (line.startsWith('-')) {
+      html += '<div class="udiff-rem">' + escHtml(line) + '</div>';
+    } else if (line.startsWith('+')) {
+      html += '<div class="udiff-add">' + escHtml(line) + '</div>';
+    } else {
+      html += '<div class="udiff-ctx">' + escHtml(line) + '</div>';
+    }
+  }
+
+  html += '</div>';
+  return html;
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
    Section 18: Tool Result Renderers (per-tool header + body)
    ────────────────────────────────────────────────────────────────────────── */
@@ -2181,6 +2225,7 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
     (typeof parsed.text === 'string' && /^(Error|Failed|✖|⚠)/i.test(parsed.text.trim()));
   const errorText = (d && d.error) || (isError ? parsed.text : '');
   const diff = d && d.diff ? renderDiff(d.diff) : '';
+  const patch = (d && typeof d.patch === 'string' && d.patch.trim()) ? d.patch : '';
 
   let filePath = '';
   if (ev.toolCallId && sessionEvents) {
@@ -2203,9 +2248,12 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
   const rawDetail = isError ? (errorText || parsed.text || 'Edit failed') : (parsed.text || 'edit');
   const headerDetail = escHtml(rawDetail.length > 120 ? rawDetail.slice(0, 117) + '...' : rawDetail);
 
-  let editsHtml = '';
-  if (!isError && d && d.edits && Array.isArray(d.edits)) {
-    editsHtml = d.edits.map(function(edit, i) {
+  // Build body content: prefer side-by-side patch, then stacked edits, then unified diff
+  let bodyContent = '';
+  if (!isError && patch) {
+    bodyContent += renderUnifiedDiff(patch, filePath);
+  } else if (!isError && d && d.edits && Array.isArray(d.edits)) {
+    bodyContent += d.edits.map(function(edit, i) {
       var oldLines = (edit.oldText || '').split('\n').length;
       var newLines = (edit.newText || '').split('\n').length;
       var oldPreview = (edit.oldText || '').split('\n').slice(0, 5).join('\n');
@@ -2218,6 +2266,12 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
         '<div style="color:var(--user);font-size:10px;max-height:80px;overflow:auto;white-space:pre-wrap;background:rgba(34,197,94,0.08);padding:4px 6px;border-radius:3px;font-family:monospace;">' + escHtml(newPreview) + '</div>' +
       '</div>';
     }).join('');
+  } else if (!isError && diff) {
+    bodyContent += '<div style="margin:8px 0;">' + diff + '</div>';
+  } else if (!isError && parsed.text) {
+    bodyContent += '<div style="margin-bottom:8px;color:var(--user);font-size:11px;font-weight:600;">✅ ' + escHtml(parsed.text) + '</div>';
+  } else if (!isError) {
+    bodyContent += '<div style="color:var(--muted);font-size:11px;">' + escHtml(parsed.text || '(no details available)') + '</div>';
   }
 
   const expandClass = (expanded || isError) ? ' tr-expanded' : '';
@@ -2237,9 +2291,7 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
         '<div style="color:var(--text);font-size:11px;line-height:1.6;white-space:pre-wrap;word-break:break-word;">' + escHtml(errorText || parsed.text || 'Unknown error') + '</div>' +
         (filePath ? '<div style="color:var(--muted);font-size:10px;margin-top:6px;">📄 File: <span style="color:var(--accent);">' + escHtml(filePath) + '</span></div>' : '') +
       '</div>' : '') +
-      (!isError && parsed.text ? '<div style="margin-bottom:8px;color:var(--user);font-size:11px;font-weight:600;">✅ ' + escHtml(parsed.text) + '</div>' : '') +
-      editsHtml +
-      (diff ? '<div style="margin:8px 0;">' + diff + '</div>' : (!isError && !editsHtml ? '<div style="color:var(--muted);font-size:11px;">' + escHtml(parsed.text || '(no details available)') + '</div>' : '')) +
+      bodyContent +
       '<div class="tr-actions">' +
         '<button class="tr-action-btn" onclick="event.stopPropagation();copyToolContent(' + idx + ')">📋 Copy</button>' +
         '<button class="tr-action-btn" onclick="event.stopPropagation();showJsonViewer(' + idx + ')">{ } JSON</button>' +
@@ -3779,11 +3831,13 @@ function toggleFilters() {
    isExpanded – check if an event should render expanded
    ────────────────────────────────────────────────────────────────────────── */
 function isExpanded(ev) {
-  if (ev.type === 'tool_result' && ev.toolName === 'update_plan') {
-    return false;
-  }
-  if (ev.type === 'tool_start' || ev.type === 'tool_result') {
+  // Expand menu only controls tool_results, not tool_starts
+  // (tool calls can still be expanded by clicking the header)
+  if (ev.type === 'tool_result') {
     return _expandedItems.has(ev.toolName);
+  }
+  if (ev.type === 'tool_start') {
+    return false;
   }
   if (ev.type === 'thinking') return _expandedItems.has('thinking');
   if (ev.type === 'user_text') return _expandedItems.has('user');

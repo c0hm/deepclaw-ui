@@ -778,3 +778,75 @@ function toggleSidebar() {
   cursor: pointer;
 }
 ```
+
+---
+
+## 19. Unified Diff Pattern
+
+**Concept:** Render unified diff patches as a single-column color-coded view — removed lines in red, added lines in green, context lines in default color, hunk headers as dividers.
+
+### When to Use
+- When rendering `edit` tool results that include `details.patch` (a unified diff)
+- When you need a simple, scannable diff view without side-by-side complexity
+
+### Pipeline
+```
+raw patch string
+     │
+     ▼
+renderUnifiedDiff(patch, filePath)  ← Simple line-by-line renderer
+     │
+     ▼
+HTML injected into .tr-body
+```
+
+### Rendering: `renderUnifiedDiff(patchText, filePath)`
+
+Produces a single-column layout:
+
+```html
+<div class="udiff">
+  <div class="udiff-file"><span>📄</span> path/to/file</div>  <!-- optional, only if filePath -->
+  <div class="udiff-hunk">@@ -1,3 +1,4 @@ ...</div>         <!-- hunk header -->
+  <div class="udiff-rem">- removed line</div>                  <!-- red background -->
+  <div class="udiff-add">+ added line</div>                    <!-- green background -->
+  <div class="udiff-ctx"> context line</div>                   <!-- default color -->
+</div>
+```
+
+### CSS Classes
+
+| Class | Purpose |
+|---|---|
+| `.udiff` | Container (bordered, scrollable at 60vh, monospace) |
+| `.udiff-file` | File path bar with 📄 icon |
+| `.udiff-hunk` | Hunk header divider (info-colored, dark bg) |
+| `.udiff-rem` | Removed lines (red bg + red text, `white-space: pre`) |
+| `.udiff-add` | Added lines (green bg + green text, `white-space: pre`) |
+| `.udiff-ctx` | Context lines (default text color, `white-space: pre`) |
+
+### Integration in `renderEditHeader()`
+
+```js
+const patch = (d && typeof d.patch === 'string' && d.patch.trim()) ? d.patch : '';
+
+// Priority order:
+if (!isError && patch) {
+  bodyContent += renderUnifiedDiff(patch, filePath);    // 1. Unified diff
+} else if (!isError && d.edits) {
+  // 2. Fallback: stacked preview blocks (existing)
+} else if (!isError && diff) {
+  // 3. Fallback: unified diff via renderDiff()
+} else if (!isError && parsed.text) {
+  // 4. Fallback: plain text
+}
+```
+
+### Key Points
+- Single-pass line-by-line — no intermediate parsing into structured hunks
+- Container scrolled at 60vh max-height for large diffs
+- File header only shown when `filePath` is truthy
+- Skips git diff boilerplate (`diff --git`, `index`, `---`, `+++`) and `\ No newline` markers
+- Patch overrides `details.edits` when both are present
+- Error results always show the error box regardless of patch presence
+- Pure JS, no external dependencies
