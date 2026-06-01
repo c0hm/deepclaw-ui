@@ -173,7 +173,7 @@ On SIGINT/SIGTERM: clears all pending debounced timers and immediately flushes e
 
 ### Created
 
-When `sessions.changed` event arrives with `state === 'created'` or `phase === 'created'`:
+When `sessions.changed` event arrives with `state === 'created'`, `phase === 'created'`, or `reason === 'create'`:
 - Clears `deletedSessions` marker for this key
 - Resets events/messages/tokens to empty
 - Calls `_doSave()` (immediate persist of cleared state)
@@ -205,7 +205,7 @@ const deletedSessions = new Set();  // Blocks re-creation from in-flight events
 When a user deletes a session but in-flight gateway events still reference it, `deletedSessions` prevents `getSession(sk)` from re-creating it. The guard is:
 - **Set** on explicit delete (user API/WS call) and gateway-ended events
 - **Cleared** on fresh gateway connection (`connect` success)
-- **Cleared for individual keys** only when `sessions.changed` with `state === 'created'` arrives (genuine re-creation)
+- **Cleared for individual keys** only when `sessions.changed` with `state === 'created'` or `reason === 'create'` arrives (genuine re-creation)
 
 ## Event Deduplication
 

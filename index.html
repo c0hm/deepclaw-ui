@@ -493,6 +493,7 @@ let sidebarCollapsed = false;
 let _lastActivityTs = 0; // timestamp of last response event, for timeout awareness
 let _newSessionPending = false; // true after clicking new-session button until run_start arrives
 let _newSessionTimeoutId = null; // timeout id for new session fallback
+let _agentList = []; // cached agent list from /api/agents
 
 /* ──────────────────────────────────────────────────────────────────────────
    Section 2: Persistent Preferences (localStorage)
@@ -697,6 +698,9 @@ function connect() {
     _autoSelectAttempted = false;
     setStatus('connected', 'Connected - listening for traffic');
 
+    // Fetch agent list for new session modal
+    fetchAgentList();
+
     // Fallback: fetch sessions from API if not receiving via WS
     setTimeout(() => {
       if (sessions.size === 0) {
@@ -851,7 +855,8 @@ function handleGatewayMsg(msg) {
   // Handle sessions.changed deletion BEFORE creating a session object
   if (name === 'sessions.changed') {
     const state = payload.state || msg.state || '';
-    if (state === 'ended' || state === 'deleted') {
+    const reason = payload.reason || '';
+    if (state === 'ended' || state === 'deleted' || reason === 'deleted' || reason === 'ended') {
       deletedSessions.add(sk);
       if (sessions.has(sk)) sessions.delete(sk);
       if (activeSession === sk) {
@@ -871,7 +876,8 @@ function handleGatewayMsg(msg) {
   if (deletedSessions.has(sk)) {
     if (name !== 'sessions.changed') return;
     const evtState = payload?.state || msg?.state || '';
-    if (evtState === 'created') {
+    const evtReason = payload?.reason || '';
+    if (evtState === 'created' || evtReason === 'create') {
       deletedSessions.delete(sk);
     } else {
       return;
@@ -1195,11 +1201,12 @@ function handleGatewayMsg(msg) {
   // Handle sessions.changed (new/ended sessions)
   if (name === 'sessions.changed') {
     const state = payload.state || msg.state;
+    const reason = payload.reason || '';
     const phase = payload.phase || '';
     const sessData = payload.session || {};
     const tokenData = payload.tokens || {};
 
-    if (state === 'created') {
+    if (state === 'created' || reason === 'create') {
       deletedSessions.delete(sk);
       const sess = getSession(sk);
       sess.events = [];
@@ -1244,7 +1251,7 @@ function handleGatewayMsg(msg) {
       return;
     }
 
-    if (state === 'active' || state === 'created') {
+    if (state === 'active' || state === 'created' || reason === 'create') {
       globalStats.sessions++;
     }
     return;
@@ -3060,7 +3067,7 @@ function sendNewSession() {
     return;
   }
 
-  const sk = activeSession || 'agent:main:main';
+  const sk = activeSession || (_agentList.length > 0 ? _agentList[0].sessionKey : 'agent:main:main');
 
   // Set pending state: disable new-session, change send to stop
   _newSessionPending = true;
@@ -3169,7 +3176,64 @@ function deleteSession(sk) {
 /* ──────────────────────────────────────────────────────────────────────────
    Section 26: New Session Modal
    ────────────────────────────────────────────────────────────────────────── */
+async function fetchAgentList() {
+  try {
+    const res = await fetch('/api/agents');
+    const data = await res.json();
+    _agentList = data.agents || [];
+  } catch (e) {
+    console.warn('Failed to fetch agent list', e);
+    _agentList = [];
+  }
+}
+
+function populateAgentSelect(agents) {
+  const select = document.getElementById('new-session-agent');
+  if (!select) return;
+  const currentVal = select.value;
+  select.innerHTML = '';
+
+  // Use provided list or fall back to cached
+  const list = agents && agents.length > 0 ? agents : _agentList;
+
+  if (list.length === 0) {
+    // Fallback: keep hardcoded options if no agents fetched
+    select.innerHTML = '<option value="agent:main:main">main</option>';
+    return;
+  }
+
+  for (const agent of list) {
+    const displayLabel = agent.model
+      ? agent.id + ' (' + agent.model + ')'
+      : agent.id;
+    const opt = document.createElement('option');
+    opt.value = agent.sessionKey;
+    opt.textContent = displayLabel;
+    select.appendChild(opt);
+  }
+
+  // Restore previous selection if it's still valid
+  if (currentVal && [...select.options].some(o => o.value === currentVal)) {
+    select.value = currentVal;
+  }
+}
+
 function showNewSessionModal() {
+  // Ensure agent list is populated
+  if (_agentList.length > 0) {
+    populateAgentSelect();
+  } else {
+    // Fetch in background and populate when ready
+    fetch('/api/agents')
+      .then(res => res.json())
+      .then(data => {
+        _agentList = data.agents || [];
+        populateAgentSelect();
+        updateSessionNameHint();
+      })
+      .catch(e => console.warn('Failed to fetch agent list', e));
+  }
+
   document.getElementById('new-session-modal').style.display = 'flex';
   document.getElementById('new-session-msg').focus();
   updateSessionNameHint();
@@ -3179,6 +3243,14 @@ function closeNewSessionModal() {
   document.getElementById('new-session-modal').style.display = 'none';
   document.getElementById('new-session-msg').value = '';
   document.getElementById('new-session-name').value = '';
+  // Restore button row (replaced by spinner in createNewSession)
+  const modal = document.getElementById('new-session-modal');
+  const modalContent = modal.querySelector('div');
+  const btnRow = modalContent.querySelector('div:last-child');
+  if (btnRow) {
+    btnRow.innerHTML = '<button onclick="closeNewSessionModal()" style="padding:6px 12px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:4px;cursor:pointer;font-size:12px;">Cancel</button>' +
+      '<button onclick="createNewSession()" style="padding:6px 12px;background:var(--accent);border:none;color:#000;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">Start</button>';
+  }
 }
 
 function updateSessionNameHint() {
@@ -3363,7 +3435,7 @@ function sendChatMessage() {
     return;
   }
 
-  const sk = activeSession || 'agent:main:main';
+  const sk = activeSession || (_agentList.length > 0 ? _agentList[0].sessionKey : 'agent:main:main');
   if (activeSession && sessions.has(activeSession)) {
     sessions.get(activeSession).draft = '';
   }

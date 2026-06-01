@@ -142,7 +142,7 @@ After auth success (100ms and 200ms delays respectively):
 | `agent.turn` | Agent turn events | `sessionKey`, `role`, `content` |
 | `sessions.tokens` | Token updates | `sessionKey`, `tokens.{inputTokens,outputTokens,totalTokens,...}` |
 | `agent` | Agent events (v2026.5.28+) | `sessionKey`, `runId`, `stream`, `data` — tool events directed to `toolEventRecipients` |
-| `sessions.changed` | Session create/reset/end | `sessionKey`, `state` (`created`/`loaded`/`ended`/`deleted`) |
+| `sessions.changed` | Session create/reset/end | `sessionKey`, `reason` (`create`/`send`/`steer`/`deleted`), enriched with full session row data |
 | `connect.challenge` | Auth challenge | `nonce`, `ts` |
 
 ### session.tool stream values

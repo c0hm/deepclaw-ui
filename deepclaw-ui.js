@@ -844,7 +844,14 @@ function handleRequest(req, res) {
     const agentsPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
     try {
       const data = JSON.parse(fs.readFileSync(agentsPath, 'utf8'));
-      const agentList = (data.agents?.list || []).map(a => ({ id: a.id, model: a.model }));
+      // Include only agents with a model (filter out tool-only entries)
+      const agentList = (data.agents?.list || [])
+        .filter(a => a.model)
+        .map(a => ({
+          id: a.id,
+          model: a.model,
+          sessionKey: `agent:${a.id}:main`
+        }));
       res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
       res.end(JSON.stringify({ agents: agentList }));
     } catch (e) {
@@ -1618,7 +1625,8 @@ function handleGatewayMessage(msg) {
     // Otherwise getSession(sk) re-creates a just-deleted session.
     if (eventName === 'sessions.changed') {
       const state = payload?.state || msg?.state || '';
-      if (state === 'ended' || state === 'deleted') {
+      const reason = payload?.reason || '';
+      if (state === 'ended' || state === 'deleted' || reason === 'deleted' || reason === 'ended') {
         const changedSk = payload?.sessionKey || msg?.sessionKey || payload?.session?.key;
         log('info', `Session ended/deleted from gateway: ${changedSk}`);
         deletedSessions.add(changedSk);
@@ -1650,7 +1658,8 @@ function handleGatewayMessage(msg) {
         // not for loaded/list-sync events that may arrive before the gateway
         // has processed the deletion.
         const evtState = payload?.state || msg?.state || '';
-        if (evtState === 'created') {
+        const evtReason = payload?.reason || '';
+        if (evtState === 'created' || evtReason === 'create') {
           deletedSessions.delete(sk);
         } else {
           return;
@@ -1773,7 +1782,8 @@ function handleGatewayMessage(msg) {
 
       // Only reset for NEW sessions (state='created'), not for existing sessions being loaded
       // Use sessions.get(sk) because the 'session' variable is scoped inside the if(sk) block above
-      if (state === 'created' || phase === 'created') {
+      const reason = payload?.reason || '';
+      if (state === 'created' || phase === 'created' || reason === 'create') {
         deletedSessions.delete(sk); // Gateway explicitly creates this session
         log('info', `Creating new session: ${sk}`);
 
