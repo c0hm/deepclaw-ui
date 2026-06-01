@@ -1223,6 +1223,7 @@ function handleGatewayMsg(msg) {
       if (sess._optimistic) {
         sess._optimistic = false;
         sess.lastTs = new Date();
+        _lastSessionCount = -1; // force sidebar re-render
       }
       if (sess._failed) sess._failed = false;
     }
