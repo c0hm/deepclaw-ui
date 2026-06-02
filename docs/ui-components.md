@@ -35,7 +35,7 @@
 
       #filters (hidden by default, toggled via #filter-toggle)
         #filter-text (text input for name/text search)
-        .filter-btn[data-filter] × 4: All, LLM, Tools, Errors
+        .filter-btn[data-filter] × 5: Minimal, All, LLM, Tools, Errors
         #expand-btn + #expand-menu (expand/collapse dropdown)
 
       #stats-line
@@ -133,12 +133,16 @@ All are `let` variables in the top-level script scope (Section 1, lines ~335–3
 ### Filter Types
 | Filter | Button Label | `getFilteredEvents()` Logic |
 |---|---|---|
+| `minimal` | Minimal | `e.type === 'user_text' \|\| e.type === 'assistant_text' \|\| e.type === 'thinking' \|\| e.type === 'tool_result'` |
 | `all` | All | All events (except `run_end`) |
-| `llm` | LLM | `e.type === 'run_start' \|\| e.type === 'thinking' \|\| e.type === 'assistant_text' \|\| e.type === 'user_text'` |
-| `tool` | Tools | `e.type === 'tool_start'` **only** (NOT `tool_result`) |
-| `error` | Errors | `e.type === 'run_error'` |
+| `llm` | LLM | `e.type === 'thinking' \|\| e.type === 'assistant_text' \|\| e.type === 'user_text'` |
+| `tool` | Tools | `e.type === 'tool_start' \|\| e.type === 'tool_result' \|\| e.type === 'user_text'` |
+| `error` | Errors | `e.type === 'run_error' \|\| e.type === 'user_text'` |
 
-**Important:** The `llm` filter does NOT include `run_end` or `run_error`. The `tool` filter does NOT include `tool_result`.
+
+### Default & Persistence
+- Default filter: `minimal` (on first launch when no saved preference)
+- User's last selected filter is persisted to `localStorage` (`deepclaw-ui-prefs.filter`) and restored on reload.
 
 ### Always Hidden
 `run_end` events are **always filtered** out:

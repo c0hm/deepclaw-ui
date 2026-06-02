@@ -165,6 +165,7 @@
   .tr-tag.err { background: var(--error); color: #fff; }
   .tr-tag-tool { background: var(--tool); color: #000; }
   .tr-header .tr-detail { color: var(--muted); font-size: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .tr-expanded .tr-header .tr-detail { -webkit-line-clamp: unset; }
   .tr-header .tr-time { margin-left: auto; font-size: 10px; color: var(--muted); flex-shrink: 0; }
   .tr-body { display: none; padding: 4px 8px 8px 8px; }
   .tr-expanded .tr-body { display: block; }
@@ -174,15 +175,20 @@
   .tr-code.with-ln > span::before { content: counter(tr-line); display: inline-block; width: 32px; margin-right: 12px; color: var(--muted); text-align: right; font-size: 10px; user-select: none; }
   .tr-code-error { color: var(--error); }
   .tr-cmd { color: var(--accent); font-size: 11px; margin-bottom: 6px; font-weight: 600; font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace; }
+  .cmd-name { color: #fff; font-weight: 700; }
+  .tr-detail .cmd-name { color: var(--accent); font-weight: 700; }
+  .file-link { color: var(--info); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+  .file-link:hover { color: #7dd3fc; }
   .tr-output-stats { color: var(--muted); font-size: 9px; margin-top: 4px; }
   .diff-add { background: rgba(34,197,94,0.12); color: #4ade80; }
   .diff-rem { background: rgba(239,68,68,0.12); color: #f87171; }
   .diff-hdr { color: var(--info); font-weight: 600; }
 
   /* ── Unified diff viewer (single column) ──────────────────── */
-  .udiff { margin: 8px 0; border: 1px solid var(--border); border-radius: 6px; overflow-y: auto; font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.5; max-height: 60vh; }
-  .udiff-file { padding: 6px 10px; background: #1a1d2e; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  .udiff { margin: 8px 0; border: 1px solid var(--border); border-radius: 6px; overflow-y: auto; font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.5; }
+  .udiff-file { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #1a1d2e; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--muted); }
   .udiff-file span { color: var(--info); }
+  .udiff-file .tr-actions { margin-top: 0; flex-shrink: 0; }
   .udiff-hunk { padding: 4px 10px; background: #1e2130; color: var(--info); font-size: 10px; border-bottom: 1px solid var(--border); }
   .udiff-rem { padding: 1px 10px; background: rgba(239,68,68,0.08); color: #fca5a5; white-space: pre-wrap; overflow-wrap: break-word; font-family: inherit; }
   .udiff-add { padding: 1px 10px; background: rgba(34,197,94,0.08); color: #86efac; white-space: pre-wrap; overflow-wrap: break-word; font-family: inherit; }
@@ -374,7 +380,8 @@
     <div id="filters">
       <input type="text" id="filter-text" placeholder="Filter by name/text...">
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn active" data-filter="minimal">Minimal</button>
+        <button class="filter-btn" data-filter="all">All</button>
         <button class="filter-btn" data-filter="llm">LLM</button>
         <button class="filter-btn" data-filter="tool">Tools</button>
         <button class="filter-btn" data-filter="error">Errors</button>
@@ -488,7 +495,7 @@
 const sessions = new Map(); // sk -> { events: [], lastTs: Date }
 const deletedSessions = new Set(); // Keys that were explicitly deleted; block re-creation from in-flight events
 let activeSession = null;
-let filter = 'all';
+let filter = 'minimal';
 let filterText = '';
 const globalStats = { sessions: 0, llmCalls: 0, toolCalls: 0, errors: 0 };
 let userScrolledUp = false;
@@ -504,6 +511,7 @@ let _lastActivityTs = 0; // timestamp of last response event, for timeout awaren
 let _newSessionPending = false; // true after clicking new-session button until run_start arrives
 let _newSessionTimeoutId = null; // timeout id for new session fallback
 let _agentList = []; // cached agent list from /api/agents
+const _blacklistedPaths = new Set(); // paths that failed preview (don't linkify again this session)
 
 /* ──────────────────────────────────────────────────────────────────────────
    Section 2: Persistent Preferences (localStorage)
@@ -516,7 +524,8 @@ function savePrefs() {
       filtersVisible,
       expandedItems: [..._expandedItems],
       lastActiveSession: _lastActiveSession,
-      sidebarCollapsed
+      sidebarCollapsed,
+      filter
     }));
   } catch { /* quota or disabled */ }
 }
@@ -529,6 +538,7 @@ function loadPrefs() {
     if (Array.isArray(p.expandedItems)) _expandedItems = new Set(p.expandedItems);
     if (typeof p.lastActiveSession === 'string') _lastActiveSession = p.lastActiveSession;
     if (typeof p.sidebarCollapsed === 'boolean') sidebarCollapsed = p.sidebarCollapsed;
+    if (typeof p.filter === 'string') filter = p.filter;
   } catch { /* corrupt, ignore */ }
 }
 loadPrefs();
@@ -553,6 +563,12 @@ loadPrefs();
   if (_lastActiveSession) {
     var agentName = getAgentName(_lastActiveSession);
     if (agentName) applyAgentTheme(agentName);
+  }
+  // apply saved filter preference (default: minimal)
+  const activeBtn = document.querySelector(`.filter-btn[data-filter="${filter}"]`);
+  if (activeBtn) {
+    document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+    activeBtn.classList.add('active');
   }
 })();
 
@@ -1678,9 +1694,10 @@ function getFilteredEvents(sess) {
   let events = sess.events;
 
   if (filter !== 'all') {
-    if (filter === 'llm') events = events.filter(e => e.type === 'run_start' || e.type === 'thinking' || e.type === 'assistant_text' || e.type === 'user_text');
-    else if (filter === 'tool') events = events.filter(e => e.type === 'tool_start');
-    else if (filter === 'error') events = events.filter(e => e.type === 'run_error');
+    if (filter === 'llm') events = events.filter(e => e.type === 'thinking' || e.type === 'assistant_text' || e.type === 'user_text');
+    else if (filter === 'minimal') events = events.filter(e => e.type === 'user_text' || e.type === 'assistant_text' || e.type === 'thinking' || e.type === 'tool_result');
+    else if (filter === 'tool') events = events.filter(e => e.type === 'tool_start' || e.type === 'tool_result' || e.type === 'user_text');
+    else if (filter === 'error') events = events.filter(e => e.type === 'run_error' || e.type === 'user_text');
   }
 
   if (filterText) {
@@ -1757,6 +1774,8 @@ function showSessionContent(sess) {
 
   let eventsWithCum = events.map((ev) => ({ ...ev, cumTotal: displayTotal }));
   sessionEvents = eventsWithCum;
+  // Full unfiltered events for tool_start lookups (Minimal filter hides tool_start)
+  window._fullSessionEvents = sess.events.map((ev) => ({ ...ev, cumTotal: displayTotal }));
 
   // ── Lazy-load: determine slice point for visible boundaries ──
   const maxBoundaries = sess._visibleBoundaries || 1;
@@ -2057,6 +2076,20 @@ function highlightCode(text, lang) {
 /* ──────────────────────────────────────────────────────────────────────────
    Section 17: Diff & Code Block Renderers
    ────────────────────────────────────────────────────────────────────────── */
+
+// Helper: find matching tool_start in full (unfiltered) session events
+// Needed because Minimal filter hides tool_start but renderers need input data
+function _findToolStart(toolCallId) {
+  if (!toolCallId) return null;
+  const list = window._fullSessionEvents || sessionEvents || [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i] && list[i].type === 'tool_start' && list[i].toolCallId === toolCallId) {
+      return list[i];
+    }
+  }
+  return null;
+}
+
 function renderDiff(diffText) {
   if (!diffText) return '';
   const lines = diffText.split('\n');
@@ -2083,14 +2116,40 @@ function renderCodeBlock(text, lang, lineNumbers) {
   return '<div class="' + cls + '">' + hl + '</div>';
 }
 
+/* ── Standard tr-actions buttons ──────────────────────────────────────── */
+function trActionsHtml(idx) {
+  return '<button class="tr-action-btn" onclick="event.stopPropagation();copyToolContent(' + idx + ')">📋 Copy</button>' +
+    '<button class="tr-action-btn" onclick="event.stopPropagation();showJsonViewer(' + idx + ')">{ } JSON</button>';
+}
+
+/* ── Render file content as udiff-style context lines ────────────────── */
+function renderUdiffContent(content, filePath, idx) {
+  if (!content) return '';
+  const lines = String(content).split('\n');
+  let html = '<div class="udiff">';
+  if (filePath) {
+    html += '<div class="udiff-file"><span>📄</span> ' + escHtml(filePath) +
+      '<div class="tr-actions">' + trActionsHtml(idx) + '</div></div>';
+  }
+  for (var i = 0; i < lines.length; i++) {
+    html += '<div class="udiff-ctx">' + escHtml(lines[i]) + '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
 /* ── Unified Diff: simple single-column renderer ──────────────────────── */
-function renderUnifiedDiff(patchText, filePath) {
+function renderUnifiedDiff(patchText, filePath, idx) {
   if (!patchText) return '';
   const lines = patchText.split('\n');
   let html = '<div class="udiff">';
 
   if (filePath) {
-    html += '<div class="udiff-file"><span>📄</span> ' + escHtml(filePath) + '</div>';
+    html += '<div class="udiff-file"><span>📄</span> ' + escHtml(filePath);
+    if (idx != null) {
+      html += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+    }
+    html += '</div>';
   }
 
   for (var li = 0; li < lines.length; li++) {
@@ -2120,6 +2179,36 @@ function renderUnifiedDiff(patchText, filePath) {
 /* ──────────────────────────────────────────────────────────────────────────
    Section 18: Tool Result Renderers (per-tool header + body)
    ────────────────────────────────────────────────────────────────────────── */
+
+// Highlight command name + linkify file paths in arguments
+function renderExecCommand(cmd) {
+  if (!cmd) return '';
+  const trimmed = cmd.trim();
+  const spaceIdx = trimmed.search(/\s/);
+  let cmdName, args;
+  if (spaceIdx === -1) { cmdName = trimmed; args = ''; }
+  else { cmdName = trimmed.slice(0, spaceIdx); args = trimmed.slice(spaceIdx + 1); }
+
+  let html = '<span class="cmd-name">' + escHtml(cmdName) + '</span>';
+  if (args) {
+    html += ' ';
+    const pathRe = /((?:~|\.\.?)?\/(?:[^\s"'`;|&<>()\[\]{}:]+\/?)+)/g;
+    let lastIdx = 0, match;
+    while ((match = pathRe.exec(args)) !== null) {
+      html += escHtml(args.slice(lastIdx, match.index));
+      const rawPath = match[1];
+      if (!rawPath.includes('://') && rawPath.length > 2 && !_blacklistedPaths.has(rawPath)) {
+        html += '<span class="file-link" onclick="event.stopPropagation();previewFileLink(this,\'' + escAttr(rawPath) + '\')" title="Preview: ' + escAttr(rawPath) + '">' + escHtml(rawPath) + '</span>';
+      } else {
+        html += escHtml(rawPath);
+      }
+      lastIdx = pathRe.lastIndex;
+    }
+    html += escHtml(args.slice(lastIdx));
+  }
+  return html;
+}
+
 function renderExecHeader(ev, parsed, t, idx, expanded) {
   const d = parsed.details || {};
   const hasExitCode = d.exitCode != null;
@@ -2127,17 +2216,12 @@ function renderExecHeader(ev, parsed, t, idx, expanded) {
   const exitCode = hasExitCode ? d.exitCode : null;
 
   let cmd = '';
-  if (ev.toolCallId && typeof sessionEvents !== 'undefined' && sessionEvents) {
-    for (let i = idx - 1; i >= 0 && i >= idx - 30; i--) {
-      const prev = sessionEvents[i];
-      if (prev && prev.type === 'tool_start' && prev.toolCallId === ev.toolCallId) {
-        try {
-          const inp = typeof prev.input === 'string' ? JSON.parse(prev.input) : prev.input;
-          cmd = (inp && inp.command) || '';
-        } catch {}
-        break;
-      }
-    }
+  const ts = _findToolStart(ev.toolCallId);
+  if (ts) {
+    try {
+      const inp = typeof ts.input === 'string' ? JSON.parse(ts.input) : ts.input;
+      cmd = (inp && inp.command) || '';
+    } catch {}
   }
 
   const exitLabelStr = exitCode != null ? exitLabel(exitCode) : '';
@@ -2146,6 +2230,7 @@ function renderExecHeader(ev, parsed, t, idx, expanded) {
     : '';
 
   let detail = [];
+  if (cmd) detail.push('$ ' + renderExecCommand(cmd));
   if (d.durationMs != null) detail.push(formatDuration(d.durationMs));
   if (d.cwd) detail.push(escHtml(shortCwd(d.cwd)));
 
@@ -2156,13 +2241,10 @@ function renderExecHeader(ev, parsed, t, idx, expanded) {
   const outputText = parsed.text || '';
   const outputStats = formatOutputStats(outputText);
   const bodyHtml = '<div class="tr-body">' +
-    (cmd ? '<div class="tr-cmd">$ <b>' + escHtml(cmd) + '</b></div>' : '') +
+    (cmd ? '<div class="tr-cmd">$ ' + renderExecCommand(cmd) + '</div>' : '') +
     (outputText ? '<div class="' + codeClass + '">' + escHtml(outputText) + '</div>' : '<div style="color:var(--muted);font-size:11px;">(no output)</div>') +
     outputStats +
-    '<div class="tr-actions">' +
-      '<button class="tr-action-btn" onclick="event.stopPropagation();copyToolContent(' + idx + ')">📋 Copy</button>' +
-      '<button class="tr-action-btn" onclick="event.stopPropagation();showJsonViewer(' + idx + ')">{ } JSON</button>' +
-    '</div>' +
+    '<div class="tr-actions">' + trActionsHtml(idx) + '</div>' +
   '</div>';
 
   const stderrClass = ((hasExitCode && !exitOk) || ev.isError) ? ' tr-stderr' : '';
@@ -2183,17 +2265,12 @@ function renderReadHeader(ev, parsed, t, idx, expanded) {
   let filePath = '';
   let lineCount = 0;
   if (parsed.text) lineCount = parsed.text.split('\n').length;
-  if (ev.toolCallId && sessionEvents) {
-    for (let i = idx - 1; i >= 0 && i >= idx - 10; i--) {
-      const prev = sessionEvents[i];
-      if (prev && prev.type === 'tool_start' && prev.toolCallId === ev.toolCallId && prev.toolName === 'read') {
-        try {
-          const inp = typeof prev.input === 'string' ? JSON.parse(prev.input) : prev.input;
-          filePath = (inp && inp.path) || '';
-        } catch { /* ignore */ }
-        break;
-      }
-    }
+  const ts = _findToolStart(ev.toolCallId);
+  if (ts && ts.toolName === 'read') {
+    try {
+      const inp = typeof ts.input === 'string' ? JSON.parse(ts.input) : ts.input;
+      filePath = (inp && inp.path) || '';
+    } catch { /* ignore */ }
   }
   const fp = filePath ? escHtml(filePath.replace(/^.*\//, '.../') || filePath) : '';
   const lines = lineCount ? '<span class="tr-detail">' + lineCount + ' lines</span>' : '';
@@ -2202,12 +2279,8 @@ function renderReadHeader(ev, parsed, t, idx, expanded) {
     : '';
   let bodyHtml = '';
   if (parsed.text) {
-    bodyHtml += renderCodeBlock(parsed.text).replace(' class="tr-code', ' style="max-height:none" class="tr-code');
+    bodyHtml += renderUdiffContent(parsed.text, filePath, idx);
   }
-  bodyHtml += '<div class="tr-actions">' +
-    '<button class="tr-action-btn" onclick="event.stopPropagation();copyToolContent(' + idx + ')">📋 Copy</button>' +
-    '<button class="tr-action-btn" onclick="event.stopPropagation();showJsonViewer(' + idx + ')">{ } JSON</button>' +
-  '</div>';
   return '<div class="tr-wrap' + (expanded ? ' tr-expanded' : '') + '" data-idx="' + idx + '">' +
     '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
       '<span class="tr-tag tr-tag-tool">↳ read</span>' +
@@ -2228,17 +2301,12 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
   const patch = (d && typeof d.patch === 'string' && d.patch.trim()) ? d.patch : '';
 
   let filePath = '';
-  if (ev.toolCallId && sessionEvents) {
-    for (let i = idx - 1; i >= 0 && i >= idx - 30; i--) {
-      const prev = sessionEvents[i];
-      if (prev && prev.type === 'tool_start' && prev.toolCallId === ev.toolCallId) {
-        try {
-          const inp = typeof prev.input === 'string' ? JSON.parse(prev.input) : prev.input;
-          filePath = (inp && inp.path) || '';
-        } catch {}
-        break;
-      }
-    }
+  const ts = _findToolStart(ev.toolCallId);
+  if (ts) {
+    try {
+      const inp = typeof ts.input === 'string' ? JSON.parse(ts.input) : ts.input;
+      filePath = (inp && inp.path) || '';
+    } catch {}
   }
   const fpShort = filePath ? escHtml(filePath.replace(/^\/home\/ju\//, '~/').replace(/^.*\//, '.../') || filePath) : '';
   const fpClickable = filePath
@@ -2248,10 +2316,12 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
   const rawDetail = isError ? (errorText || parsed.text || 'Edit failed') : (parsed.text || 'edit');
   const headerDetail = escHtml(rawDetail.length > 120 ? rawDetail.slice(0, 117) + '...' : rawDetail);
 
-  // Build body content: prefer side-by-side patch, then stacked edits, then unified diff
+  // Build body content: prefer patch with udiff, then stacked edits, then unified diff
   let bodyContent = '';
+  let hasUdiffActions = false;
   if (!isError && patch) {
-    bodyContent += renderUnifiedDiff(patch, filePath);
+    bodyContent += renderUnifiedDiff(patch, filePath, idx);
+    hasUdiffActions = true;
   } else if (!isError && d && d.edits && Array.isArray(d.edits)) {
     bodyContent += d.edits.map(function(edit, i) {
       var oldLines = (edit.oldText || '').split('\n').length;
@@ -2292,10 +2362,7 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
         (filePath ? '<div style="color:var(--muted);font-size:10px;margin-top:6px;">📄 File: <span style="color:var(--accent);">' + escHtml(filePath) + '</span></div>' : '') +
       '</div>' : '') +
       bodyContent +
-      '<div class="tr-actions">' +
-        '<button class="tr-action-btn" onclick="event.stopPropagation();copyToolContent(' + idx + ')">📋 Copy</button>' +
-        '<button class="tr-action-btn" onclick="event.stopPropagation();showJsonViewer(' + idx + ')">{ } JSON</button>' +
-      '</div>' +
+      (hasUdiffActions ? '' : '<div class="tr-actions">' + trActionsHtml(idx) + '</div>') +
     '</div>' +
   '</div>';
 }
@@ -2303,29 +2370,40 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
 function renderWriteHeader(ev, parsed, t, idx, expanded) {
   const text = parsed.text || '';
   let filePath = '';
-  if (ev.toolCallId && sessionEvents) {
-    for (let i = idx - 1; i >= 0 && i >= idx - 10; i--) {
-      const prev = sessionEvents[i];
-      if (prev && prev.type === 'tool_start' && prev.toolCallId === ev.toolCallId && prev.toolName === 'write') {
-        try {
-          const inp = typeof prev.input === 'string' ? JSON.parse(prev.input) : prev.input;
-          filePath = (inp && inp.path) || '';
-        } catch { /* ignore */ }
-        break;
-      }
-    }
+  let content = '';
+  const ts = _findToolStart(ev.toolCallId);
+  if (ts && ts.toolName === 'write') {
+    try {
+      const inp = typeof ts.input === 'string' ? JSON.parse(ts.input) : ts.input;
+      filePath = (inp && inp.path) || '';
+      content = (inp && inp.content != null) ? String(inp.content) : '';
+    } catch { /* ignore */ }
   }
+  // Fallback to parsed.text if no content from tool call
+  if (!content && parsed.text) content = parsed.text;
   const fpShort = filePath ? escHtml(filePath.replace(/^\/home\/ju\//, '~/').replace(/^.*\//, '.../') || filePath) : '';
   const fpClickable = filePath
     ? '<span class="tr-detail" style="cursor:pointer;color:var(--info);text-decoration:underline;text-underline-offset:2px;" onclick="event.stopPropagation();viewFile(\'' + escAttr(filePath) + '\')" title="Click to view: ' + escAttr(filePath) + '">📄 ' + fpShort + '</span>'
     : '';
+  // Content stats for header
+  const contentLines = content ? content.split('\n').length : 0;
+  const sizeLabel = content ? formatContentSize(content) : '';
+  const statsDetail = [];
+  if (contentLines) statsDetail.push(contentLines + ' lines');
+  if (sizeLabel) statsDetail.push(sizeLabel);
+  let bodyHtml = '';
+  if (content) {
+    bodyHtml += renderUdiffContent(content, filePath, idx);
+  }
   return '<div class="tr-wrap' + (expanded ? ' tr-expanded' : '') + '" data-idx="' + idx + '">' +
     '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
       '<span class="tr-tag tr-tag-tool">↳ write</span>' +
       '<span class="tr-tag ok">✅</span>' +
       (filePath ? fpClickable : '<span class="tr-detail">' + escHtml(text) + '</span>') +
+      (statsDetail.length ? '<span class="tr-detail">' + statsDetail.join(' · ') + '</span>' : '') +
       '<span class="tr-time">' + t + '</span>' +
     '</div>' +
+    (content ? '<div class="tr-body">' + bodyHtml + '</div>' : '') +
   '</div>';
 }
 
@@ -2372,10 +2450,7 @@ function renderMemorySearchHeader(ev, parsed, t, idx, expanded) {
     '</div>' +
     '<div class="tr-body">' +
       (cards || '<div style="color:var(--muted);font-size:11px;">No results</div>') +
-      '<div class="tr-actions">' +
-        '<button class="tr-action-btn" onclick="event.stopPropagation();copyToolContent(' + idx + ')">📋 Copy</button>' +
-        '<button class="tr-action-btn" onclick="event.stopPropagation();showJsonViewer(' + idx + ')">{ } JSON</button>' +
-      '</div>' +
+      '<div class="tr-actions">' + trActionsHtml(idx) + '</div>' +
     '</div>' +
   '</div>';
 }
@@ -2407,10 +2482,7 @@ function renderUpdatePlanHeader(ev, parsed, t, idx, expanded) {
     '</div>' +
     '<div class="tr-body">' +
       (stepsHtml || '<div style="color:var(--muted);font-size:11px;">' + escHtml(parsed.text || '') + '</div>') +
-      '<div class="tr-actions">' +
-        '<button class="tr-action-btn" onclick="event.stopPropagation();copyToolContent(' + idx + ')">📋 Copy</button>' +
-        '<button class="tr-action-btn" onclick="event.stopPropagation();showJsonViewer(' + idx + ')">{ } JSON</button>' +
-      '</div>' +
+      '<div class="tr-actions">' + trActionsHtml(idx) + '</div>' +
     '</div>' +
   '</div>';
 }
@@ -2432,10 +2504,7 @@ function renderToolBody(ev, parsed, idx) {
   if (parsed.text) {
     bodyHtml += renderCodeBlock(parsed.text, ev.toolName === 'exec' ? 'shell' : '');
   }
-  bodyHtml += '<div class="tr-actions">' +
-    '<button class="tr-action-btn" onclick="event.stopPropagation();copyToolContent(' + idx + ')">📋 Copy</button>' +
-    '<button class="tr-action-btn" onclick="event.stopPropagation();showJsonViewer(' + idx + ')">{ } JSON</button>' +
-  '</div>';
+  bodyHtml += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
   return '<div class="tr-body">' + bodyHtml + '</div>';
 }
 
@@ -2555,6 +2624,31 @@ function viewFile(filePath) {
     .catch(err => {
       console.error('[viewFile] Failed:', err.message);
       alert('Failed to view file: ' + err.message);
+    });
+}
+
+// Preview a file link from exec command output — on failure silently unlink + blacklist
+function previewFileLink(el, filePath) {
+  if (!filePath) return;
+  fetch('/api/files/share', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filePath: filePath })
+  })
+    .then(res => {
+      if (!res.ok) return res.json().then(e => { throw new Error(e.error); });
+      return res.json();
+    })
+    .then(data => {
+      window.open(data.viewUrl, '_blank');
+    })
+    .catch(err => {
+      console.warn('[previewFileLink] Not a file, unlinking:', filePath, err.message);
+      _blacklistedPaths.add(filePath);
+      if (el && el.parentNode) {
+        const textNode = document.createTextNode(el.textContent || filePath);
+        el.parentNode.replaceChild(textNode, el);
+      }
     });
 }
 
@@ -4048,6 +4142,7 @@ document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
     filter = btn.dataset.filter;
     document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    savePrefs();
     scheduleUIUpdate(false, true);
   };
 });

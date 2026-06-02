@@ -783,30 +783,34 @@ function toggleSidebar() {
 
 ## 19. Unified Diff Pattern
 
-**Concept:** Render unified diff patches as a single-column color-coded view — removed lines in red, added lines in green, context lines in default color, hunk headers as dividers.
+**Concept:** Render unified diff patches and file content as a single-column view inside a `.udiff` container. For diffs: removed lines in red, added lines in green, context lines in default color, hunk headers as dividers. For plain file content: all lines as context. The `.udiff-file` header bar includes action buttons (Copy + JSON) on the right side via flexbox.
 
 ### When to Use
 - When rendering `edit` tool results that include `details.patch` (a unified diff)
-- When you need a simple, scannable diff view without side-by-side complexity
+- When rendering `read` and `write` tool results — file content displayed as udiff context lines
+- When you need a simple, scannable view without side-by-side complexity
 
 ### Pipeline
 ```
-raw patch string
-     │
-     ▼
-renderUnifiedDiff(patch, filePath)  ← Simple line-by-line renderer
-     │
-     ▼
-HTML injected into .tr-body
+raw patch string                    file content string
+     │                                     │
+     ▼                                     ▼
+renderUnifiedDiff(patch, fp, idx)    renderUdiffContent(content, fp, idx)
+     │                                     │
+     ▼                                     ▼
+HTML injected into .tr-body          HTML injected into .tr-body
 ```
 
-### Rendering: `renderUnifiedDiff(patchText, filePath)`
+### Rendering: `renderUnifiedDiff(patchText, filePath, idx)`
 
 Produces a single-column layout:
 
 ```html
 <div class="udiff">
-  <div class="udiff-file"><span>📄</span> path/to/file</div>  <!-- optional, only if filePath -->
+  <div class="udiff-file">
+    <span>📄</span> path/to/file
+    <div class="tr-actions"><button>📋 Copy</button><button>{ } JSON</button></div>  <!-- when idx provided -->
+  </div>
   <div class="udiff-hunk">@@ -1,3 +1,4 @@ ...</div>         <!-- hunk header -->
   <div class="udiff-rem">- removed line</div>                  <!-- red background -->
   <div class="udiff-add">+ added line</div>                    <!-- green background -->
@@ -814,39 +818,65 @@ Produces a single-column layout:
 </div>
 ```
 
+### Rendering: `renderUdiffContent(content, filePath, idx)`
+
+For plain file content (read/write results):
+
+```html
+<div class="udiff">
+  <div class="udiff-file">
+    <span>📄</span> path/to/file
+    <div class="tr-actions"><button>📋 Copy</button><button>{ } JSON</button></div>
+  </div>
+  <div class="udiff-ctx">line 1 content</div>
+  <div class="udiff-ctx">line 2 content</div>
+  ...
+</div>
+```
+
+### Action Button Helper: `trActionsHtml(idx)`
+
+Returns the standard Copy + JSON buttons. Used by all tool result renderers for consistency:
+
+```js
+function trActionsHtml(idx) {
+  return '<button class="tr-action-btn" onclick="...copyToolContent(' + idx + ')">📋 Copy</button>' +
+    '<button class="tr-action-btn" onclick="...showJsonViewer(' + idx + ')">{ } JSON</button>';
+}
+```
+
 ### CSS Classes
 
 | Class | Purpose |
 |---|---|
-| `.udiff` | Container (bordered, scrollable at 60vh, monospace) |
-| `.udiff-file` | File path bar with 📄 icon |
+| `.udiff` | Container (bordered, scrollable, monospace) |
+| `.udiff-file` | File path bar with 📄 icon; flex container (`space-between`) for actions on right |
+| `.udiff-file .tr-actions` | Action buttons inside file bar (`margin-top: 0; flex-shrink: 0`) |
 | `.udiff-hunk` | Hunk header divider (info-colored, dark bg) |
 | `.udiff-rem` | Removed lines (red bg + red text, `white-space: pre`) |
 | `.udiff-add` | Added lines (green bg + green text, `white-space: pre`) |
 | `.udiff-ctx` | Context lines (default text color, `white-space: pre`) |
 
-### Integration in `renderEditHeader()`
+### Integration in renderers
 
 ```js
-const patch = (d && typeof d.patch === 'string' && d.patch.trim()) ? d.patch : '';
-
-// Priority order:
+// In renderEditHeader() — patch present:
 if (!isError && patch) {
-  bodyContent += renderUnifiedDiff(patch, filePath);    // 1. Unified diff
-} else if (!isError && d.edits) {
-  // 2. Fallback: stacked preview blocks (existing)
-} else if (!isError && diff) {
-  // 3. Fallback: unified diff via renderDiff()
-} else if (!isError && parsed.text) {
-  // 4. Fallback: plain text
+  bodyContent += renderUnifiedDiff(patch, filePath, idx);  // actions inside .udiff-file
+  hasUdiffActions = true;
 }
+// Later: only add standalone .tr-actions if not already in udiff
+if (!hasUdiffActions) { bodyContent += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>'; }
+
+// In renderReadHeader() / renderWriteHeader():
+bodyHtml += renderUdiffContent(content, filePath, idx);  // actions inside .udiff-file
 ```
 
 ### Key Points
 - Single-pass line-by-line — no intermediate parsing into structured hunks
-- Container scrolled at 60vh max-height for large diffs
-- File header only shown when `filePath` is truthy
-- Skips git diff boilerplate (`diff --git`, `index`, `---`, `+++`) and `\ No newline` markers
-- Patch overrides `details.edits` when both are present
+- `renderUnifiedDiff`: skips git diff boilerplate (`diff --git`, `index`, `---`, `+++`) and `\ No newline` markers
+- `renderUdiffContent`: all lines as `.udiff-ctx` (no diff coloring)
+- File header always shown when `filePath` is truthy; actions included when `idx` is provided
+- Patch overrides `details.edits` when both are present in edit results
 - Error results always show the error box regardless of patch presence
 - Pure JS, no external dependencies

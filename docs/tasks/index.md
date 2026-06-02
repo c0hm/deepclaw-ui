@@ -4,6 +4,8 @@ This file tracks all tasks, features, and changes made to the DeepClaw UI projec
 
 ## Completed Tasks
 
+- **[udiff-format-for-read-write-results](udiff-format-for-read-write-results.md)** (2026-06-02) — Made `read`/`write` tool results use the same `.udiff` container format as `edit` when expanded. Moved `tr-actions` inside `.udiff-file` header bar (right side via flexbox). Added `trActionsHtml(idx)` helper, `renderUdiffContent()` for plain file content. Refactored all renderers to use `trActionsHtml` for consistency.
+
 - **[side-by-side-diff-for-edit-results](side-by-side-diff-for-edit-results.md)** (2026-06-01) — Replaced CSS Grid side-by-side diff with clean single-column unified diff for edit results. Removed `parseUnifiedPatch()` + `renderSideBySideDiff()`, added `renderUnifiedDiff()`.
 
 - **[fix-new-session-optimistic-stuck](fix-new-session-optimistic-stuck.md)** (2026-06-01) — Fixed new session sidebar stuck in "Creating..." status after modal creation. Sidebar was not re-rendering when `sessions.changed` cleared the optimistic flag.

@@ -1066,6 +1066,18 @@ function handleRequest(req, res) {
           return;
         }
 
+        try {
+          if (!fs.statSync(resolved).isFile()) {
+            res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify({ error: 'Path is not a regular file' }));
+            return;
+          }
+        } catch (statErr) {
+          res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ error: 'Cannot stat file: ' + statErr.message }));
+          return;
+        }
+
         const token = crypto.randomUUID();
         const timeoutHandle = setTimeout(() => {
           fileShareTokens.delete(token);
@@ -1110,6 +1122,18 @@ function handleRequest(req, res) {
       return;
     }
 
+    try {
+      if (!fs.statSync(entry.path).isFile()) {
+        res.writeHead(400, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+        res.end('Path is not a regular file.');
+        return;
+      }
+    } catch (statErr) {
+      res.writeHead(500, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+      res.end('Error reading file.');
+      return;
+    }
+
     const filename = path.basename(entry.path);
     log('info', `Serving one-shot file: ${entry.path} (token consumed)`);
     res.writeHead(200, {
@@ -1151,7 +1175,21 @@ function handleRequest(req, res) {
     }
 
     // Read the file content (cap at 2MB for viewer)
-    const stat = fs.statSync(entry.path);
+    let stat;
+    try {
+      stat = fs.statSync(entry.path);
+    } catch (statErr) {
+      res.writeHead(404, { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' });
+      res.end('<!DOCTYPE html><body style="background:#1e1e2e;color:#cdd6f4;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh"><h2>File Unavailable</h2><p style="color:#a6adc8">' + statErr.message + '</p></body>');
+      return;
+    }
+
+    if (!stat.isFile()) {
+      res.writeHead(400, { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' });
+      res.end('<!DOCTYPE html><body style="background:#1e1e2e;color:#cdd6f4;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh"><h2>Not a File</h2><p style="color:#a6adc8">The requested path is not a regular file.</p></body>');
+      return;
+    }
+
     const MAX_VIEW_SIZE = 2 * 1024 * 1024; // 2MB
     if (stat.size > MAX_VIEW_SIZE) {
       res.writeHead(413, { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' });
@@ -1159,7 +1197,15 @@ function handleRequest(req, res) {
       return;
     }
 
-    const content = fs.readFileSync(entry.path, 'utf8');
+    let content;
+    try {
+      content = fs.readFileSync(entry.path, 'utf8');
+    } catch (readErr) {
+      res.writeHead(500, { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' });
+      res.end('<!DOCTYPE html><body style="background:#1e1e2e;color:#cdd6f4;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh"><h2>Read Error</h2><p style="color:#a6adc8">' + readErr.message + '</p></body>');
+      return;
+    }
+
     const filename = path.basename(entry.path);
     log('info', `Viewing one-shot file: ${entry.path} (token consumed)`);
 

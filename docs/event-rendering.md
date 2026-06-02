@@ -217,33 +217,43 @@ All produce a **`.tr-wrap`** container with:
 - **Looks up** matching `tool_start` by `toolCallId` (up to 10 events) for `filePath`
 - **File viewer link:** clickable `📄 .../path` with `viewFile()` call
 - **Line count:** parsed from result text split
-- **Body:** code block (no max-height limit) + Copy + JSON buttons
+- **Body:** File content rendered via `renderUdiffContent()` — `.udiff` container with `.udiff-file` header bar (path + tr-actions on right) and content lines as `.udiff-ctx` lines
 
 #### `renderEditHeader(ev, parsed, t, idx, expanded)`
 - **Looks up** matching `tool_start` for `filePath`
 - **Error detection:** `ev.isError`, `parsed.isError`, error in details, or text starts with Error/Failed/✖/⚠
 - **Header:** OK/ERROR tag + file link + truncated detail (120 chars)
 - **On error:** Red error box with "✖ Edit Failed", error text, file path
-- **On success (patch present):** Unified diff via `renderUnifiedDiff()` — single-column, line-by-line: removed lines in red, added lines in green, context lines in default text color, hunk headers as divider rows.
+- **On success (patch present):** Unified diff via `renderUnifiedDiff(patch, filePath, idx)` — single-column, line-by-line: removed lines in red, added lines in green, context lines in default text color, hunk headers as divider rows. Copy + JSON buttons embedded inside `.udiff-file` header bar (right side).
 - **On success (edits, no patch):** Fallback to `.mem-card` cards (old ↓ red, new ↑ green, max 5 lines prev each)
 - **On success (diff, no patch/edits):** Fallback to `renderDiff()` unified diff
-- **Actions:** Copy + JSON
+- **Actions:** Copy + JSON (inside `.udiff-file` when patch present; standalone `.tr-actions` otherwise)
 
-##### Unified diff helper
+##### Unified diff helpers
 
-**`renderUnifiedDiff(patchText, filePath)`** — Simple single-column line-by-line renderer:
-- `.udiff` → container (bordered, scrollable at 60vh, monospace)
-- `.udiff-file` → file path bar (optional, shown when filePath provided)
+**`renderUnifiedDiff(patchText, filePath, idx)`** — Single-column line-by-line diff renderer:
+- `.udiff` → container (bordered, scrollable, monospace)
+- `.udiff-file` → file path bar; when `idx` is provided, includes `tr-actions` (Copy + JSON) on the right side via flexbox
 - `.udiff-hunk` → hunk header row (info-colored, dark background)
 - `.udiff-rem` → removed lines (red background + red text)
 - `.udiff-add` → added lines (green background + green text)
 - `.udiff-ctx` → context lines (default text color)
 - Skips git diff boilerplate (`diff --git`, `index`, `---`, `+++`) and `\ No newline` markers
 
+**`renderUdiffContent(content, filePath, idx)`** — Renders plain file content in udiff container:
+- Same `.udiff` / `.udiff-file` wrapper as `renderUnifiedDiff`
+- All content lines rendered as `.udiff-ctx` (no diff coloring)
+- `.udiff-file` always includes `tr-actions` on the right when `filePath` is provided
+- Used by `read` and `write` tool result renderers
+
+**`trActionsHtml(idx)`** — Returns standard Copy + JSON action buttons HTML. Used by all tool result renderers for consistency.
+
 #### `renderWriteHeader(ev, parsed, t, idx, expanded)`
-- **Looks up** matching `tool_start` for `filePath`
-- **Header:** ✅ tag + file link (or text detail)
-- **No body** (compact, no expand)
+- **Looks up** matching `tool_start` for `filePath` and `content`
+- **Header:** ✅ tag + file link (or text detail) + content stats (lines · size)
+- **Body:** File content via `renderUdiffContent()` in `.udiff` container with tr-actions inside `.udiff-file`
+- Falls back to `parsed.text` if no content from tool call input
+- No body when no content available
 - File path shortened: `/home/ju/` → `~/`, then `.../filename`
 
 #### `renderProcessHeader(ev, parsed, t, idx, expanded)`
