@@ -22,6 +22,19 @@ const DATA_DIR = path.join(__dirname, 'data');
 const DCPASS = process.env.DCPASS || 'deepclaw';
 const authEnabled = true;
 
+// Shared Basic Auth validation — used by both HTTP and WebSocket paths
+function validateBasicAuth(authHeader) {
+  if (!authHeader || !authHeader.startsWith('Basic ')) return false;
+  const base64Credentials = authHeader.split(' ')[1];
+  try {
+    const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
+    const [, password] = credentials.split(':');
+    return password === DCPASS;
+  } catch {
+    return false;
+  }
+}
+
 // --- Device Identity ---
 const IDENTITY_DIR = path.join(os.homedir(), '.openclaw', 'identity');
 const DEVICE_JSON_PATH = path.join(IDENTITY_DIR, 'device.json');
@@ -782,22 +795,7 @@ function handleRequest(req, res) {
   const parsedUrl = url.parse(req.url, true);
 
   if (authEnabled) {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader || !authHeader.startsWith('Basic ')) {
-      res.writeHead(401, {
-        'Content-Type': 'text/plain',
-        'WWW-Authenticate': 'Basic realm="DeepClaw UI"'
-      });
-      res.end('401 Unauthorized');
-      return;
-    }
-
-    const base64Credentials = authHeader.split(' ')[1];
-    const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
-    const [username, password] = credentials.split(':');
-    const validPass = DCPASS;
-
-    if (password !== validPass) {
+    if (!validateBasicAuth(req.headers['authorization'])) {
       res.writeHead(401, {
         'Content-Type': 'text/plain',
         'WWW-Authenticate': 'Basic realm="DeepClaw UI"'
@@ -1203,7 +1201,17 @@ if (certs) {
   log('warn', 'No TLS certificates found - running without HTTPS');
 }
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({
+  server,
+  verifyClient: ({ req }) => {
+    // Enforce same Basic Auth as HTTP endpoints.
+    // Browsers automatically send cached credentials on same-origin
+    // WebSocket upgrades, including auto-reconnects. When the password
+    // changes and the server restarts, old clients are rejected here
+    // and must refresh the page to re-authenticate.
+    return authEnabled ? validateBasicAuth(req.headers['authorization']) : true;
+  }
+});
 
 wss.on('connection', (ws, req) => {
   const clientId = makeId();

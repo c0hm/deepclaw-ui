@@ -27,28 +27,26 @@ node deepclaw-ui.js
 ```javascript
 const DCPASS = process.env.DCPASS || 'deepclaw';  // default is 'deepclaw'
 const authEnabled = true;  // always enabled, unconditionally
+
+// Shared Basic Auth validation — used by both HTTP and WebSocket paths
+function validateBasicAuth(authHeader) {
+  if (!authHeader || !authHeader.startsWith('Basic ')) return false;
+  const base64Credentials = authHeader.split(' ')[1];
+  try {
+    const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
+    const [, password] = credentials.split(':');
+    return password === DCPASS;
+  } catch {
+    return false;
+  }
+}
 ```
 
-### Request Handler
+### HTTP Request Handler
 
 ```javascript
 if (authEnabled) {  // always true
-  const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
-    res.writeHead(401, {
-      'Content-Type': 'text/plain',
-      'WWW-Authenticate': 'Basic realm="DeepClaw UI"'
-    });
-    res.end('401 Unauthorized');
-    return;
-  }
-
-  const base64Credentials = authHeader.split(' ')[1];
-  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
-  const [username, password] = credentials.split(':');
-  const validPass = DCPASS;  // no fallback logic
-
-  if (password !== validPass) {
+  if (!validateBasicAuth(req.headers['authorization'])) {
     res.writeHead(401, {
       'Content-Type': 'text/plain',
       'WWW-Authenticate': 'Basic realm="DeepClaw UI"'
@@ -59,8 +57,20 @@ if (authEnabled) {  // always true
 }
 ```
 
+### WebSocket Handler
+
+```javascript
+const wss = new WebSocket.Server({
+  server,
+  verifyClient: ({ req }) => {
+    return authEnabled ? validateBasicAuth(req.headers['authorization']) : true;
+  }
+});
+```
+
 **Key notes:**
-- `validPass = DCPASS` — no `DEFAULT_PASSWORD` fallback constant exists in code
+- Auth validation is shared between HTTP and WebSocket via `validateBasicAuth()`
+- `verifyClient` blocks unauthenticated WebSocket upgrades with HTTP 401
 - `authEnabled = true` — always on, not conditional on `DCPASS` being set
 - Default password is inline in the `DCPASS` declaration: `process.env.DCPASS || 'deepclaw'`
 
@@ -82,7 +92,11 @@ Browser will prompt for credentials automatically when accessing protected endpo
 
 ## WebSocket
 
-WebSocket connections (browser ↔ server) do **not** use HTTP Basic Auth. Auth is applied only to HTTP endpoints. The browser WebSocket is intended for use after the browser has already authenticated via the HTTP endpoint (loaded `index.html`).
+WebSocket connections (browser ↔ server) are authenticated via the **same Basic Auth check** as HTTP endpoints. The `verifyClient` callback on the WebSocket server validates the `Authorization` header from the HTTP upgrade request.
+
+**Browser behavior:** Browsers automatically include cached Basic Auth credentials on same-origin WebSocket upgrade requests, including auto-reconnects after server restart.
+
+**Password rotation:** When the password changes and the server restarts, existing browser clients are **immediately locked out** — their WebSocket reconnects fail with HTTP 401 because the browser's cached credentials no longer match. Users must refresh the page to re-authenticate with the new password.
 
 ## Security Considerations
 
@@ -92,6 +106,8 @@ WebSocket connections (browser ↔ server) do **not** use HTTP Basic Auth. Auth 
 | Password | Use strong passwords in production |
 | Token | `OPENCLAW_TOKEN` is separate from UI password — used for Gateway auth |
 | Auth toggle | Auth **cannot be disabled** — always enforced |
+| WebSocket auth | WebSocket connections require same Basic Auth as HTTP — enforced via `verifyClient` |
+| Password rotation | Changing `DCPASS` and restarting **immediately revokes** all existing clients; they must re-authenticate |
 
 ## API Keys vs Password
 
