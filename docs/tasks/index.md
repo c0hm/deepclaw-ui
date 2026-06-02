@@ -4,6 +4,8 @@ This file tracks all tasks, features, and changes made to the DeepClaw UI projec
 
 ## Active Tasks
 
+- **[improve-tool-result-rendering](improve-tool-result-rendering.md)** (2026-06-02) — ✅ Completed. **memory_search header shows query + web_fetch gets dedicated renderer.** (A) `renderMemorySearchHeader` now looks up matching `tool_start` to extract query, shows `🔍 "query" · N results` instead of just `🔍 N results`. (B) New `renderWebFetchHeader` replaces generic fallback: header shows HTTP status badge, shortened clickable URL, duration, content size; expanded body uses `renderUdiffContent()` (same as read/write).
+
 - **[prev-messages-scroll-button](prev-messages-scroll-button.md)** (2026-06-02) — ✅ Completed. Added "↑ N previous messages" button at top of messages panel, mirroring the existing "↓ N new messages" button. New `userScrolledDown` state, `scrollToTop()`, `updatePrevMsgButton()`, `countMessagesAbove()` functions.
 
 - **[image-gen-result-link-and-viewer](image-gen-result-link-and-viewer.md)** (2026-06-02) — ✅ Completed. **Media Gen Result Filename Links + Image Viewer Support.** (A) `renderImageGenResult` / `renderVideoGenResult` / `renderMusicGenResult` headers: replaced opaque `task ea2ba2c9...` with clickable `.../filename.png` link to `/api/media/serve/<token>` (with `stopPropagation`) when `status=completed`. (B) One-shot file viewer now handles images: `detectFileType` detects PNG/JPG/GIF/WebP/SVG/BMP/ICO, viewer route reads as base64, `generateViewerPage` renders inline `<img>` with data URI, MIME badge, and Download button.

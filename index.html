@@ -2632,6 +2632,15 @@ function renderMemorySearchHeader(ev, parsed, t, idx, expanded) {
   const d = parsed.details || {};
   const results = d.results || [];
   const count = results.length;
+  // Look up query from matching tool_start
+  let query = '';
+  const ts = _findToolStart(ev.toolCallId);
+  if (ts && ts.toolName === 'memory_search') {
+    try {
+      const inp = typeof ts.input === 'string' ? JSON.parse(ts.input) : ts.input;
+      query = (inp && inp.query) || '';
+    } catch { /* ignore */ }
+  }
   let cards = '';
   if (count > 0) {
     cards = results.slice(0, 5).map(r => {
@@ -2647,7 +2656,7 @@ function renderMemorySearchHeader(ev, parsed, t, idx, expanded) {
   return '<div class="tr-wrap' + (expanded ? ' tr-expanded' : '') + '" data-idx="' + idx + '">' +
     '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
       '<span class="tr-tag tr-tag-tool">↳ mem_search</span>' +
-      '<span class="tr-detail">🔍 ' + count + ' result' + (count !== 1 ? 's' : '') + '</span>' +
+      '<span class="tr-detail">🔍' + (query ? ' "' + escHtml(query) + '"' : '') + ' · ' + count + ' result' + (count !== 1 ? 's' : '') + '</span>' +
       '<span class="tr-time">' + t + '</span>' +
     '</div>' +
     '<div class="tr-body">' +
@@ -3088,6 +3097,108 @@ function renderSpawnResult(ev, parsed, t, idx, expanded) {
       '<span class="tr-time">' + t + '</span>' +
     '</div>' +
     '<div class="tr-body">' + bodyHtml + '</div>' +
+  '</div>';
+}
+
+/* ── web_fetch (result) ─────────────────────────────────────────────── */
+function renderWebFetchHeader(ev, parsed, t, idx, expanded) {
+  var d = parsed.details || {};
+  var url = d.url || '';
+  var statusCode = d.status;       // web_fetch envelope uses 'status', not 'statusCode'
+  var durationMs = d.tookMs;       // web_fetch envelope uses 'tookMs', not 'durationMs'
+  // The actual extracted text lives in details.text (content[0].text is a JSON blob)
+  var text = d.text || parsed.text || '';
+  var textLen = d.length || d.rawLength || (text ? text.length : 0);
+  // Look up URL from matching tool_start if not in details
+  if (!url) {
+    var ts = _findToolStart(ev.toolCallId);
+    if (ts && ts.toolName === 'web_fetch') {
+      try {
+        var inp = typeof ts.input === 'string' ? JSON.parse(ts.input) : ts.input;
+        url = (inp && inp.url) || '';
+      } catch(e) { /* ignore */ }
+    }
+  }
+  // Status badge
+  var statusTag = '';
+  if (statusCode != null) {
+    var isOk = statusCode >= 200 && statusCode < 300;
+    statusTag = '<span class="tr-tag ' + (isOk ? 'ok' : 'err') + '">' + statusCode + '</span>';
+  }
+  // Shortened URL
+  var urlShort = url ? escHtml(url.replace(/^https?:\/\//, '').replace(/^.*\//, '.../') || url) : '';
+  var urlDetail = url
+    ? '<span class="tr-detail" style="cursor:pointer;color:var(--info);text-decoration:underline;text-underline-offset:2px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escAttr(url) + '" onclick="event.stopPropagation();window.open(\'' + escAttr(url) + '\', \'_blank\')">🌐 ' + urlShort + '</span>'
+    : '';
+  // Duration + size
+  var metaParts = [];
+  if (durationMs != null) metaParts.push(formatDuration(durationMs));
+  if (textLen) metaParts.push(formatContentSize(String(text)));
+  var metaDetail = metaParts.length ? '<span class="tr-detail">' + metaParts.join(' · ') + '</span>' : '';
+  // Body: extracted text
+  var bodyHtml = '';
+  if (text) {
+    bodyHtml += renderUdiffContent(text, url, idx);
+  }
+  return '<div class="tr-wrap' + (ev.isError ? ' tr-error' : '') + (expanded || ev.isError ? ' tr-expanded' : '') + '" data-idx="' + idx + '">' +
+    '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+      '<span class="tr-tag tr-tag-tool">↳ web_fetch</span>' +
+      statusTag +
+      urlDetail +
+      metaDetail +
+      '<span class="tr-time">' + t + '</span>' +
+    '</div>' +
+    (text ? '<div class="tr-body">' + bodyHtml + '</div>' : '') +
+  '</div>';
+}
+
+function renderWebSearchHeader(ev, parsed, t, idx, expanded) {
+  var d = parsed.details || {};
+  var query = d.query || '';
+  var provider = d.provider || '';
+  var count = d.count || (d.results ? d.results.length : 0);
+  var durationMs = d.tookMs;
+  var results = d.results || [];
+  // Result cards
+  var cards = '';
+  if (results.length > 0) {
+    cards = results.map(function(r) {
+      var title = r.title || '';
+      var url = r.url || '';
+      var snippet = r.snippet || r.text || r.description || '';
+      var siteName = r.siteName || '';
+      // Clean untrusted content wrappers from title/snippet (they contain web_search source markers)
+      var cleanTitle = title.replace(/<<<EXTERNAL_UNTRUSTED_CONTENT[^>]*>>>/g, '').replace(/<<<END_EXTERNAL_UNTRUSTED_CONTENT[^>]*>>>/g, '').replace(/Source: Web Search\n---\n/g, '').trim();
+      var cleanSnippet = snippet.replace(/<<<EXTERNAL_UNTRUSTED_CONTENT[^>]*>>>/g, '').replace(/<<<END_EXTERNAL_UNTRUSTED_CONTENT[^>]*>>>/g, '').replace(/Source: Web Search\n---\n/g, '').trim();
+      // Truncate snippet
+      if (cleanSnippet.length > 250) cleanSnippet = cleanSnippet.slice(0, 247) + '...';
+      return '<div class="mem-card">' +
+        '<div class="path">' +
+          (url
+            ? '<a href="' + escAttr(url) + '" target="_blank" style="color:var(--info);text-decoration:none;font-weight:600;" onclick="event.stopPropagation()">' + escHtml(cleanTitle) + '</a>'
+            : escHtml(cleanTitle)) +
+          (siteName ? ' <span style="color:var(--muted);font-size:10px;">' + escHtml(siteName) + '</span>' : '') +
+        '</div>' +
+        (cleanSnippet ? '<div style="font-size:11px;margin-top:4px;color:var(--text);line-height:1.5;">' + escHtml(cleanSnippet) + '</div>' : '') +
+        (url ? '<div style="font-size:10px;margin-top:2px;color:var(--muted);">' + escHtml(url) + '</div>' : '') +
+      '</div>';
+    }).join('');
+  }
+  // Meta parts
+  var metaParts = [];
+  if (count) metaParts.push(count + ' result' + (count !== 1 ? 's' : ''));
+  if (provider) metaParts.push(escHtml(provider));
+  if (durationMs != null) metaParts.push(formatDuration(durationMs));
+  return '<div class="tr-wrap' + (ev.isError ? ' tr-error' : '') + (expanded || ev.isError ? ' tr-expanded' : '') + '" data-idx="' + idx + '">' +
+    '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+      '<span class="tr-tag tr-tag-tool">↳ web_search</span>' +
+      '<span class="tr-detail">🔍' + (query ? ' "' + escHtml(query) + '"' : '') + ' · ' + metaParts.join(' · ') + '</span>' +
+      '<span class="tr-time">' + t + '</span>' +
+    '</div>' +
+    '<div class="tr-body">' +
+      (cards || '<div style="color:var(--muted);font-size:11px;">No results</div>') +
+      '<div class="tr-actions">' + trActionsHtml(idx) + '</div>' +
+    '</div>' +
   '</div>';
 }
 
@@ -3885,6 +3996,8 @@ function renderToolResult(ev, idx, expanded) {
     case 'video_generate': return renderVideoGenResult(ev, parsed, t, idx, expanded);
     case 'music_generate': return renderMusicGenResult(ev, parsed, t, idx, expanded);
     case 'sessions_spawn':  return renderSpawnResult(ev, parsed, t, idx, expanded);
+    case 'web_fetch': return renderWebFetchHeader(ev, parsed, t, idx, expanded);
+    case 'web_search': return renderWebSearchHeader(ev, parsed, t, idx, expanded);
     default:         return renderGenericHeader(ev, parsed, t, idx, expanded);
   }
 }

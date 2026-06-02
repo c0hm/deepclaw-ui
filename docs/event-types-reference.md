@@ -207,8 +207,10 @@ Renders as a **per-tool expandable header** (`.tr-wrap`), not a flat text label:
 | `edit` | `renderEditHeader` | Success/error tag, file path, edit blocks preview (-old/+new), diff block, copy/JSON buttons |
 | `write` | `renderWriteHeader` | File path (clickable), ✅ confirmation |
 | `process` | `renderProcessHeader` | Status emoji, session name, exit code, full body |
-| `memory_search` | `renderMemorySearchHeader` | Result count, memory cards with path/score/excerpt |
+| `memory_search` | `renderMemorySearchHeader` | Query + result count, memory cards with path/score/excerpt |
 | `update_plan` | `renderUpdatePlanHeader` | Completed/total steps, plan steps with status icons |
+| `web_fetch` | `renderWebFetchHeader` | HTTP status badge, clickable shortened URL, duration, content size; expanded body shows extracted text |
+| `web_search` | `renderWebSearchHeader` | Query + result count, provider, duration; expanded body shows result cards (title link, snippet, URL) |
 | *(any other)* | `renderGenericHeader` | Tool name, error indicator, full body |
 
 **Trivial results are hidden:** Results matching `/^(ok|success|done|true|false|null|undefined)$/i` (tested against trimmed string) are silently skipped. Note: this is a regex match that may match substrings (e.g. "done." would be skipped).
@@ -812,6 +814,8 @@ Results vary by tool. Most results are envelopes parsed by `parseToolResult()`:
 | `image_generate` | envelope | Async: status, taskId, provider, size, format. Also handles list (providers) and status (progress) |
 | `video_generate` | envelope | Async: same pattern as image_generate |
 | `music_generate` | envelope | Async: same pattern as image_generate |
+| `web_search` | envelope | Query, provider, count, tookMs, results[] with title/url/snippet/siteName |
+| `web_fetch` | envelope | HTTP status, URL, duration, extracted text content (rendered via udiff) |
 | `message` | envelope | Delivery status, channel, target |
 | *(other)* | envelope or string | Generic rendering |
 

@@ -222,6 +222,9 @@ function renderToolResult(ev, idx, expanded) {
     case 'message':        return renderMessageResult(ev, parsed, t, idx, expanded);
     case 'video_generate': return renderVideoGenResult(ev, parsed, t, idx, expanded);
     case 'music_generate': return renderMusicGenResult(ev, parsed, t, idx, expanded);
+    case 'sessions_spawn':  return renderSpawnResult(ev, parsed, t, idx, expanded);
+    case 'web_fetch': return renderWebFetchHeader(ev, parsed, t, idx, expanded);
+    case 'web_search': return renderWebSearchHeader(ev, parsed, t, idx, expanded);
     default:         return renderGenericHeader(ev, parsed, t, idx, expanded);
   }
 }
@@ -283,6 +286,21 @@ All produce a **`.tr-wrap`** container with:
 
 **`trActionsHtml(idx)`** — Returns standard Copy + JSON action buttons HTML. Used by all tool result renderers for consistency.
 
+#### `renderWebFetchHeader(ev, parsed, t, idx, expanded)`
+- **Looks up** matching `tool_start` for `url` (fallback: `d.url` from details envelope)
+- **Header:** `↳ web_fetch` tag + HTTP status badge (green ok / red err) + clickable shortened URL `🌐 host/path` + `durationMs` + content size `(lines · size)`
+- **Status badge:** `200` (`.tr-tag.ok` green for 2xx) or `404`/`500` (`.tr-tag.err` red for 4xx/5xx)
+- **Body:** Extracted text via `renderUdiffContent()` in `.udiff` container with tr-actions inside `.udiff-file`
+- **Meta:** formatDuration + formatContentSize (e.g. `1.2s · 3.4 KB`)
+- URL clickable — opens in new tab
+
+#### `renderWebSearchHeader(ev, parsed, t, idx, expanded)`
+- **Data source:** `parsed.details` — `query`, `provider`, `count`, `tookMs`, `results[]` (`{ title, url, snippet, siteName }`)
+- **Header:** `↳ web_search` tag + `🔍 "query"` + result count + provider name + duration
+- **Body:** Result cards (`.mem-card`) with clickable title link, siteName badge, snippet (250 chars max), URL
+- **Cleaning:** Strips `<<<EXTERNAL_UNTRUSTED_CONTENT...>>>` wrappers from title/snippet
+- **Actions:** Copy + JSON
+
 #### `renderWriteHeader(ev, parsed, t, idx, expanded)`
 - **Looks up** matching `tool_start` for `filePath` and `content`
 - **Header:** ✅ tag + file link (or text detail) + content stats (lines · size)
@@ -297,8 +315,9 @@ All produce a **`.tr-wrap`** container with:
 - **Body:** `renderToolBody()` (code block + Copy + JSON)
 
 #### `renderMemorySearchHeader(ev, parsed, t, idx, expanded)`
+- **Looks up** matching `tool_start` for `query` string
 - **Results:** up to 5 result cards, each with path, score badge (percentage), excerpt (200 chars)
-- **Header:** `🔍 N results`
+- **Header:** `🔍 "query" · N results` (query shown in quotes, omitted if no match)
 - **Body:** memory cards + "No results" fallback + Copy + JSON
 
 #### `renderUpdatePlanHeader(ev, parsed, t, idx, expanded)`
