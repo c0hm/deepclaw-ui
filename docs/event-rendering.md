@@ -64,6 +64,10 @@ switch (ev.toolName) {
   case 'process':        return renderProcessCall(ev, inp, idx);
   case 'memory_search':  return renderMemSearchCall(ev, inp, idx);
   case 'memory_get':     return renderMemGetCall(ev, inp, idx);
+  case 'image_generate': return renderImageGenCall(ev, inp, idx);
+  case 'message':        return renderMessageCall(ev, inp, idx);
+  case 'video_generate': return renderVideoGenCall(ev, inp, idx);
+  case 'music_generate': return renderMusicGenCall(ev, inp, idx);
   default:               return renderGenericCall(ev, inp, idx);
 }
 ```
@@ -139,6 +143,33 @@ All call renderers produce a **`.tc-wrap`** container with:
 - **Metadata:** path, from, lines, corpus
 - **Actions:** Copy path + JSON
 
+#### `renderImageGenCall(ev, inp, idx)`
+- **CSS class:** `tc-wrap tc-media` (purple border-left)
+- **Header icons:** 🖼️ with prompt preview (80 chars)
+- **Modes:** Handles `action=list`, `action=status`, and `action=generate` with different headers
+- **Metadata (generate):** prompt, model (shortened), size, aspectRatio, resolution, quality, outputFormat, background, count, filename, timeoutMs, reference images (image/images), OpenAI options (openai.background/moderation/outputCompression/user), fal creativity
+- **Actions:** Copy prompt + JSON
+
+#### `renderVideoGenCall(ev, inp, idx)`
+- **CSS class:** `tc-wrap tc-media` (purple border-left)
+- **Header icons:** 🎬 with prompt preview, model, size, aspectRatio, duration, audio/watermark indicators
+- **Modes:** Handles `action=list`, `action=status`, and `action=generate`
+- **Metadata (generate):** prompt, model, size, aspectRatio, resolution, durationSeconds, audio, watermark, filename, timeoutMs, reference images/videos
+- **Actions:** Copy prompt + JSON
+
+#### `renderMusicGenCall(ev, inp, idx)`
+- **CSS class:** `tc-wrap tc-media` (purple border-left)
+- **Header icons:** 🎵 with prompt or lyrics preview
+- **Modes:** Handles `action=list`, `action=status`, and `action=generate`
+- **Metadata (generate):** prompt, lyrics, model, durationSeconds, instrumental, format, filename, reference images
+- **Actions:** Copy prompt/lyrics + JSON
+
+#### `renderMessageCall(ev, inp, idx)`
+- **CSS class:** `tc-wrap tc-msg` (cyan border-left)
+- **Header icons:** 💬 with message preview + optional 📎 file indicator
+- **Metadata:** message, channel, to, filePath, sessionKey
+- **Actions:** Copy message + JSON
+
 #### `renderGenericCall(ev, inp, idx)` (fallback)
 - **CSS class:** `tc-wrap`
 - **Header icons:** 🔧 with tool name + first 2 key=value args (or `_raw` preview)
@@ -187,6 +218,10 @@ function renderToolResult(ev, idx, expanded) {
     case 'process':  return renderProcessHeader(ev, parsed, t, idx, expanded);
     case 'memory_search': return renderMemorySearchHeader(ev, parsed, t, idx, expanded);
     case 'update_plan':   return renderUpdatePlanHeader(ev, parsed, t, idx, expanded);
+    case 'image_generate': return renderImageGenResult(ev, parsed, t, idx, expanded);
+    case 'message':        return renderMessageResult(ev, parsed, t, idx, expanded);
+    case 'video_generate': return renderVideoGenResult(ev, parsed, t, idx, expanded);
+    case 'music_generate': return renderMusicGenResult(ev, parsed, t, idx, expanded);
     default:         return renderGenericHeader(ev, parsed, t, idx, expanded);
   }
 }
@@ -269,6 +304,28 @@ All produce a **`.tr-wrap`** container with:
 #### `renderUpdatePlanHeader(ev, parsed, t, idx, expanded)`
 - **Plan summary:** `✅ N/M steps · 🔄 X in progress`
 - **Body:** All plan steps with icons (✅/🔄/⬜) + text + Copy + JSON
+
+#### `renderImageGenResult(ev, parsed, t, idx, expanded)`
+- **CSS class:** `tr-wrap` (with `tr-error` for errors)
+- **Modes:**
+  - `action=list`: Shows provider count badge + table of providers (✅ configured / ⬜ not) with id, modes, models
+  - `action=status`: Shows active/idle badge + provider + progress summary
+  - `action=generate` (async): Shows status badge (🔄 started / ⏳ running / ✅ completed / ❌ failed), async tag, provider, size, format, taskId
+- **Body:** message text in muted panel
+- **Actions:** Copy + JSON
+
+#### `renderVideoGenResult(ev, parsed, t, idx, expanded)`
+- Same structure as `renderImageGenResult` with 🎬 video_gen tag
+- Additional details: durationSeconds in header
+
+#### `renderMusicGenResult(ev, parsed, t, idx, expanded)`
+- Same structure as `renderImageGenResult` with 🎵 music_gen tag
+- Additional details: durationSeconds, format in header
+
+#### `renderMessageResult(ev, parsed, t, idx, expanded)`
+- **Header:** 💬 message tag + delivery status badge (✅ sent / ❌ failed / 📤 other)
+- **Details:** channel, target
+- **Body:** message text in muted panel + Copy + JSON
 
 #### `renderGenericHeader(ev, parsed, t, idx, expanded)` (fallback)
 - **Header:** `↳ toolname` + optional "✖ error"
@@ -436,7 +493,7 @@ CSS classes: `.syn-kw` (#c084fc purple), `.syn-str` (#4ade80 green), `.syn-cmt` 
 - **Only created locally**, never from server
 
 ### `run_start` Events
-- **gateway-injected souls**: Renders as `<div class="session-divider">` with `── ◈ SESSION START ◈ ──` text
+- **gateway-injected souls**: Renders as clickable `<div class="session-divider">` with `── ◈ SESSION START ◈ ──` text and timestamp. Clicking smooth-scrolls it to the top of the viewport via `jumpToSessionTop()`.
 - **Real run_start**: Badge `▶`, separate `Σ totalTokens` badge, model name, metadata line:
   - `in: N | out: N | ctx: N | $X.XXXX | seq: N`
   - If `ev.thinking` present (legacy): renders "💭 Thinking:" block with pre-wrap text
@@ -563,7 +620,7 @@ The central function that:
 2. Applies filter via `getFilteredEvents(sess)`
 3. Marks `assistant_text` events as `isFinal` / `isIntermediate`
 4. Computes `cumTotal` (cumulative total tokens) for each event
-5. Handles lazy-load session boundary slicing
+5. Renders all loaded events (no slicing — all boundaries visible)
 6. Decides compact vs expanded rendering per event
 7. Manages incremental append vs full rebuild
 8. Handles scroll tracking

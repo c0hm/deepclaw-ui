@@ -265,46 +265,35 @@ When `event.added` delivers a `user_text`:
 
 ---
 
-## 6. Session Boundary Lazy-Load Pattern
+## 6. Session Boundary Navigation Pattern
 
-**Concept:** Long sessions are divided by `gateway-injected` markers. Only the N most recent boundaries are rendered; older ones are loaded on demand.
+**Concept:** Long sessions are divided by `gateway-injected` `run_start` markers. All loaded events are always rendered (no view slicing). Session boundaries are always visible as dividers. When loading more events, new content appears above — the scroll position is preserved proportionally so the user's view doesn't move.
 
-### State
-```js
-sess._visibleBoundaries = 1; // default: show 1 boundary
+### Session Divider
+```html
+<div class="session-divider" onclick="jumpToSessionTop(this)">
+  ── ◈ SESSION START ◈ ── <timestamp>
+</div>
 ```
-
-### Render Slicing
-```js
-// In showSessionContent():
-let boundaryCount = 0;
-let sliceFrom = 0;
-for (let i = events.length - 1; i >= 0; i--) {
-  if (ev.type === 'run_start' && ev.model === 'gateway-injected') {
-    boundaryCount++;
-    if (boundaryCount === maxBoundaries) { sliceFrom = i; break; }
-  }
-}
-const rendered = sliceFrom > 0 ? events.slice(sliceFrom) : events;
-```
+Clicking the divider smooth-scrolls it to the top of the viewport.
 
 ### Load More
 ```js
-function loadPreviousSessionBoundary() {
-  sess._visibleBoundaries++;
-  sess._renderedCount = 0;  // force full rebuild
-  scheduleUIUpdate(true, true);
+function loadMoreEvents() {
+  // ... fetch more events ...
+  showSessionContent(sess);
+  // Proportional scroll preservation in showSessionContent handles the rest
 }
 ```
 
 ### UI Element
 ```html
-<div class="load-more-sessions" onclick="loadPreviousSessionBoundary()">
-  ⬆ Load Previous Session
+<div class="load-more-sessions" onclick="loadMoreEvents()">
+  ⬆ Load older events (XXX remaining)
 </div>
 ```
 
-Rendered at the top of the event list when `sliceFrom > 0`.
+Rendered at the top of the event list when session is truncated and more events exist on the server.
 
 ---
 
@@ -621,7 +610,6 @@ if (name === 'session.sync') {
   sess.events = [];
   sess._seenMsgHashes = new Set();
   sess._renderedCount = 0;
-  sess._visibleBoundaries = 1;
 
   // 2. Ingest token/model metadata
   // 3. Ingest events with timestamp conversion

@@ -41,6 +41,7 @@
       #stats-line
         .stat × 4: Sessions, LLM Calls, Tool Calls, Errors
 
+      #prev-msg-btn ("↑ Previous messages" floating button, top of messages)
       #messages (scrollable event list)
         .no-session placeholder
         .msg cards, .compact-row, .tc-wrap, .tr-wrap, .session-divider
@@ -78,6 +79,7 @@ All are `let` variables in the top-level script scope (Section 1, lines ~335–3
 | `globalStats` | `object` | `{ sessions:0, llmCalls:0, toolCalls:0, errors:0 }` | Aggregate statistics across all sessions |
 | `userScrolledUp` | `boolean` | `false` | Whether user has scrolled away from bottom |
 | `pendingNewMessages` | `number` | `0` | New message count while scrolled up |
+| `userScrolledDown` | `boolean` | `false` | Whether user has scrolled away from top |
 | `sessionEvents` | `Array<Event>` | `[]` | Current session's events with `cumTotal` added |
 | `filtersVisible` | `boolean` | `false` | Filters bar visibility (persisted via localStorage) |
 | `_expandedItems` | `Set<string>` | `new Set(['user','response'])` | Items to always render expanded (persisted) |
@@ -112,7 +114,6 @@ All are `let` variables in the top-level script scope (Section 1, lines ~335–3
 | `sessionId` | `string` | Gateway session ID |
 | `_seenMsgHashes` | `Set<string>` | Deduplication hash set |
 | `_renderedCount` | `number` | How many events rendered (for incremental updates) |
-| `_visibleBoundaries` | `number` | How many session boundaries to show (lazy load) |
 | `_optimistic` | `boolean` | Session being created (modal spinner) |
 | `_failed` | `boolean` | Session creation failed |
 | `draft` | `string` | Unsent chat input (preserved on session switch) |
@@ -133,7 +134,7 @@ All are `let` variables in the top-level script scope (Section 1, lines ~335–3
 ### Filter Types
 | Filter | Button Label | `getFilteredEvents()` Logic |
 |---|---|---|
-| `minimal` | Minimal | `e.type === 'user_text' \|\| e.type === 'assistant_text' \|\| e.type === 'thinking' \|\| e.type === 'tool_result'` |
+| `minimal` | Minimal | `user_text`, `assistant_text`, `thinking`, `tool_result` (+ `tool_start` for `image_generate`, `sessions_spawn`, `sessions_yield`; `image_generate` results only `completed`; `sessions_yield` results hidden) |
 | `all` | All | All events (except `run_end`) |
 | `llm` | LLM | `e.type === 'thinking' \|\| e.type === 'assistant_text' \|\| e.type === 'user_text'` |
 | `tool` | Tools | `e.type === 'tool_start' \|\| e.type === 'tool_result' \|\| e.type === 'user_text'` |
@@ -262,8 +263,21 @@ Sessions sorted descending by `lastTs` (most recently active first).
 - 6px custom scrollbar (track transparent, thumb var(--border))
 - Contains: `.msg`, `.compact-row`, `.tc-wrap`, `.tr-wrap`, `.session-divider`, `.load-more-sessions`
 
+### "↑ Previous Messages" Button (`#prev-msg-btn`)
+- Absolute position: top of messages area, centered
+- Shows when `userScrolledDown` (scrolled away from top, `scrollTop >= 80`)
+- Dynamic top offset calculated from `#messages.getBoundingClientRect()` relative to `#content`
+- Click → `jumpToPrevUser()` → smooth-scrolls to the most recent `user_text` event above the viewport (`.msg-user` / `.compact-user` element), clearing scroll-down state
+- Falls back to scrolling to top if no user message is found above
+- Text:
+  - `"↑ N messages to user"` — when a previous user message exists above, counting visible elements between viewport and that message
+  - `"↑ Jump to user message"` — when the previous user message is the very next element above
+  - `"↑ Jump to top"` — fallback when no user message is found above the viewport
+- `findPreviousUserEl()`: scans `#messages` children for `.msg-user` / `.compact-user` elements whose bottom edge is above the scroll position, returns the closest one (highest offsetTop)
+- `countMessagesToPrevUser(prevUserEl)`: counts child elements from the viewport to (and including) the target user element
+
 ### "↓ New Messages" Button (`#new-msg-btn`)
-- Fixed position: bottom of messages area, centered
+- Absolute position: bottom of messages area, centered (20px from bottom of `#content`)
 - Shows when `pendingNewMessages > 0` (new events arrived while scrolled up)
 - Click → `scrollToBottom(true)` → clears scroll-up state
 - Text: `"↓ N new messages"` or `"↓ New messages"`
@@ -375,33 +389,24 @@ if (_pendingRequest) {
 ## Session Boundary Lazy Load
 
 ### System Overview
-Long-running sessions are divided into "boundaries" marked by `gateway-injected` `run_start` events. The UI lazily loads older boundaries.
+Long-running sessions are divided into "boundaries" marked by `gateway-injected` `run_start` events. All loaded boundaries are always visible — the UI renders all loaded events without slicing.
 
-### State
-- `sess._visibleBoundaries: number` — how many boundaries to show (default: 1)
-
-### Rendering Logic (in `showSessionContent()`)
-```js
-const maxBoundaries = sess._visibleBoundaries || 1;
-let boundaryCount = 0;
-let sliceFrom = 0;
-for (let i = eventsWithCum.length - 1; i >= 0; i--) {
-  if (ev.type === 'run_start' && ev.model === 'gateway-injected') {
-    boundaryCount++;
-    if (boundaryCount === maxBoundaries) { sliceFrom = i; break; }
-  }
-}
-// Render only events from sliceFrom onwards
+### Session Divider Rendering
+Each `gateway-injected` `run_start` renders as a clickable divider:
+```html
+<div class="session-divider" onclick="jumpToSessionTop(this)">
+  ── ◈ SESSION START ◈ ── <timestamp>
+</div>
 ```
+Clicking the divider smooth-scrolls it to the top of the viewport, focusing that session.
 
-### "Load Previous Session" Button
-- Appears at top when `sliceFrom > 0`
+### "Load Older Events" Button
+- Appears at top when `sess._truncated` and `sess._totalEventCount > sess.events.length`
 - CSS class: `.load-more-sessions` (accent color, full-width, clickable)
-- Calls `loadPreviousSessionBoundary()` which:
-  - Increments `sess._visibleBoundaries`
-  - Resets `sess._renderedCount` to 0
-  - Invalidates filter cache
-  - Triggers full UI rebuild
+- Calls `loadMoreEvents()` which:
+  - Fetches next batch (+300 events) from REST API
+  - Renders ALL loaded events (no slicing)
+  - Scroll position is anchored to visible content — newScrollTop = oldScrollTop + (newHeight - oldHeight), keeping the user's view stationary while older events appear above
 
 ---
 
@@ -502,7 +507,7 @@ Clicking any event badge or the `{ } JSON` button on tool call/result headers.
 1. `POST /api/session/:key/clear-events`
 2. `GET /api/session/:key` to fetch fresh state
 3. Replaces `sess.events` with fetched data
-4. Resets `_renderedCount`, `_visibleBoundaries`, token counts
+4. Resets `_renderedCount`, token counts
 5. Invalidates filter cache, triggers full UI rebuild
 
 ---

@@ -97,8 +97,10 @@
   .input-actions { display: flex; flex-direction: column; gap: 2px; align-items: center; }
   #close-input-btn { padding: 2px 6px; border-radius: 3px; font-size: 12px; cursor: pointer; background: transparent; border: 1px solid transparent; color: var(--muted); }
   #close-input-btn:hover { background: var(--border); color: var(--text); }
-  #new-msg-btn { display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; border: none; border-radius: 16px; padding: 6px 14px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(99,102,241,0.4); z-index: 10; }
+  #new-msg-btn { display: none; position: absolute; bottom: 92px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; border: none; border-radius: 16px; padding: 6px 14px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(99,102,241,0.4); z-index: 10; opacity: 0.5; }
   #new-msg-btn:hover { background: #5255d4; }
+  #prev-msg-btn { display: none; position: absolute; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; border: none; border-radius: 16px; padding: 6px 14px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(99,102,241,0.4); z-index: 10; opacity: 0.5; }
+  #prev-msg-btn:hover { background: #5255d4; }
   #resize-handle { height: 6px; background: var(--border); cursor: ns-resize; flex-shrink: 0; position: relative; }
   #resize-handle.hidden { display: none; }
   #resize-handle::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 40px; height: 3px; background: var(--muted); border-radius: 2px; opacity: 0.5; }
@@ -165,7 +167,6 @@
   .tr-tag.err { background: var(--error); color: #fff; }
   .tr-tag-tool { background: var(--tool); color: #000; }
   .tr-header .tr-detail { color: var(--muted); font-size: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .tr-expanded .tr-header .tr-detail { -webkit-line-clamp: unset; }
   .tr-header .tr-time { margin-left: auto; font-size: 10px; color: var(--muted); flex-shrink: 0; }
   .tr-body { display: none; padding: 4px 8px 8px 8px; }
   .tr-expanded .tr-body { display: block; }
@@ -215,7 +216,7 @@
   .tc-expanded .tc-header { overflow: visible; white-space: normal; }
   .tc-expanded .tc-cmd,
   .tc-expanded .tc-path,
-  .tc-expanded .tc-preview { white-space: normal; overflow: visible; text-overflow: clip; }
+  .tc-expanded .tc-preview { white-space: pre-wrap; overflow: visible; text-overflow: clip; }
   .tc-header { cursor: pointer; padding: 3px 8px; font-size: 11px; color: var(--text); display: flex; align-items: center; gap: 6px; user-select: none; border-radius: 3px; overflow: hidden; min-width: 0; white-space: nowrap; }
   .tc-header:hover { background: rgba(255,255,255,0.03); }
   .tc-body { display: none; padding: 4px 8px 8px 8px; font-size: 11px; }
@@ -231,12 +232,17 @@
   .tc-actions { margin-top: 6px; display: flex; gap: 6px; justify-content: flex-end; }
   .tc-action-btn { background: var(--bg); border: 1px solid var(--border); color: var(--muted); padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 10px; }
   .tc-action-btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
-  .tc-task-body { max-height: 40vh; overflow: auto; white-space: pre-wrap; line-height: 1.5; padding: 4px 0; }
   .tc-copy-path { cursor: pointer; font-size: 9px; opacity: 0.35; flex-shrink: 0; line-height: 1; }
   .tc-copy-path:hover { opacity: 0.9; }
   /* exec: green tint */
   .tc-wrap.tc-exec { border-left-color: #4ade80; }
   .tc-wrap.tc-exec .tc-name { color: #4ade80; }
+  /* media gen (image/video/music): purple tint */
+  .tc-wrap.tc-media { border-left-color: #c084fc; }
+  .tc-wrap.tc-media .tc-name { color: #c084fc; }
+  /* message: cyan tint */
+  .tc-wrap.tc-msg { border-left-color: #22d3ee; }
+  .tc-wrap.tc-msg .tc-name { color: #22d3ee; }
   /* exec stderr: red */
   .tr-wrap.tr-stderr { border-left-color: var(--error); }
   .tr-wrap.tr-stderr .tr-tag { background: var(--error); color: #fff; }
@@ -261,7 +267,9 @@
   .compact-row:hover { background: #1a1d28; color: var(--text); }
   .compact-tag { font-size: 9px; padding: 1px 4px; border-radius: 2px; margin-right: 6px; flex-shrink: 0; }
   .compact-sep { color: #3a3d4a; margin: 0 4px; }
-  .session-divider { padding: 8px 16px; margin: 4px 0; background: linear-gradient(90deg, rgba(99,102,241,0.08), rgba(99,102,241,0.15), rgba(99,102,241,0.08)); border-top: 1px solid var(--accent); border-bottom: 1px solid var(--accent); text-align: center; font-size: 10px; color: var(--accent); letter-spacing: 0.08em; font-weight: 600; }
+  .expandable-card { cursor: pointer; }
+  .session-divider { padding: 8px 16px; margin: 4px 0; background: linear-gradient(90deg, rgba(99,102,241,0.08), rgba(99,102,241,0.15), rgba(99,102,241,0.08)); border-top: 1px solid var(--accent); border-bottom: 1px solid var(--accent); text-align: center; font-size: 10px; color: var(--accent); letter-spacing: 0.08em; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .session-divider:hover { background: linear-gradient(90deg, rgba(99,102,241,0.15), rgba(99,102,241,0.25), rgba(99,102,241,0.15)); }
   .load-more-sessions { padding: 10px 16px; text-align: center; cursor: pointer; color: var(--accent); border-bottom: 1px solid var(--accent); border-top: 1px solid var(--border); font-size: 11px; font-weight: 600; letter-spacing: 0.05em; transition: background 0.1s, color 0.1s; user-select: none; }
   .load-more-sessions:hover { background: rgba(99,102,241,0.12); color: #a5b4fc; }
 
@@ -334,8 +342,9 @@
   <h1 onclick="toggleSidebar()" title="Toggle sidebar" style="cursor:pointer;">DeepClaw UI</h1>
   <div id="status">
     <div class="dot disconnected" id="dot"></div>
-    <span id="conn-status">Connecting to gateway...</span>
+    <span id="conn-status">Connecting…</span>
   </div>
+
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -399,6 +408,7 @@
       <div class="stat"><span class="stat-label">Errors:</span><span class="stat-value error" id="s-errors">0</span></div>
     </div>
 
+    <button id="prev-msg-btn" onclick="jumpToPrevUser()">↑ Previous messages</button>
     <div id="messages">
       <div class="no-session">Select a session from the left panel</div>
     </div>
@@ -500,9 +510,11 @@ let filterText = '';
 const globalStats = { sessions: 0, llmCalls: 0, toolCalls: 0, errors: 0 };
 let userScrolledUp = false;
 let pendingNewMessages = 0;
+let userScrolledDown = false;
+let _lastScrollTop = 0;
 let sessionEvents = [];
 let filtersVisible = false;
-let _expandedItems = new Set(['user', 'response', 'edit', 'update_plan']); // item keys to always show expanded (tool names + 'user','response','thinking')
+let _expandedItems = new Set(['user', 'response', 'edit', 'update_plan', 'image_generate', 'video_generate', 'music_generate', 'sessions_spawn']); // item keys to always show expanded (tool names + 'user','response','thinking')
 let _pendingRequest = false; // Phase 3: true between Send and response end
 let _pendingSentMsg = null; // Phase 1: text of last sent message for optimistic matching
 let _lastSentSessionKey = null; // Phase 1: session key where message was sent
@@ -510,6 +522,7 @@ let sidebarCollapsed = false;
 let _lastActivityTs = 0; // timestamp of last response event, for timeout awareness
 let _newSessionPending = false; // true after clicking new-session button until run_start arrives
 let _newSessionTimeoutId = null; // timeout id for new session fallback
+let _loadingOlderEvents = false; // flag during loadMoreEvents to anchor scroll at top rather than proportional
 let _agentList = []; // cached agent list from /api/agents
 const _blacklistedPaths = new Set(); // paths that failed preview (don't linkify again this session)
 
@@ -946,7 +959,6 @@ function handleGatewayMsg(msg) {
     sess.events = [];
     sess._seenMsgHashes = new Set();
     sess._renderedCount = 0;
-    sess._visibleBoundaries = 1;
     sess.sessionId = payload.sessionId || '';
 
     const tok = payload.tokens || {};
@@ -1006,6 +1018,10 @@ function handleGatewayMsg(msg) {
       sess.messages = payload.messages;
     }
 
+    // Track if this session sync was truncated (server only sent last 100 events)
+    sess._truncated = !!payload.truncated;
+    sess._totalEventCount = payload.totalEventCount || sess.events.length;
+
     scheduleUIUpdate(true, true);
     tryAutoSelect();
     return;
@@ -1053,13 +1069,22 @@ function handleGatewayMsg(msg) {
     }
 
     // Merge streaming tool_result events
+    // ── Smart merge: JSON envelopes (complete values) replace prior partial
+    // text; plain-text deltas (e.g., exec stdout) are appended as before.
     if (ev.type === 'tool_result' && ev.runId) {
       const resultStr = typeof ev.result === 'string' ? ev.result : JSON.stringify(ev.result);
       for (let i = sess.events.length - 1; i >= 0; i--) {
         const prev = sess.events[i];
         if (prev.type === 'tool_result' && prev.toolCallId === ev.toolCallId && prev.runId === ev.runId) {
-          if (typeof prev.result !== 'string') prev.result = JSON.stringify(prev.result);
-          prev.result += resultStr;
+          if (tryParseToolResultEnvelope(resultStr)) {
+            // Complete JSON envelope supersedes any intermediate partial text
+            prev.result = resultStr;
+            prev.isError = ev.isError;
+          } else {
+            // Plain-text delta — append
+            if (typeof prev.result !== 'string') prev.result = JSON.stringify(prev.result);
+            prev.result += resultStr;
+          }
           prev.ts = ev.ts;
           scheduleUIUpdate(false, true);
           return;
@@ -1426,7 +1451,16 @@ function handleGatewayMsg(msg) {
         globalStats.toolCalls++;
         _lastActivityTs = Date.now();
       } else if (phase === 'done' || phase === 'result' || stream === 'done') {
-        sess.events.push({ type: 'tool_result', runId, toolName, input: toolInput, result: toolResult, isError, toolCallId, ts: new Date() });
+        // Merge into existing tool_result from event.added (update phase) if present,
+        // to avoid duplicate tool_result events during streaming.
+        const existing = sess.events.find(e => e.type === 'tool_result' && e.toolCallId === toolCallId && e.runId === runId);
+        if (existing) {
+          existing.result = toolResult;
+          existing.isError = isError;
+          existing.ts = new Date();
+        } else {
+          sess.events.push({ type: 'tool_result', runId, toolName, input: toolInput, result: toolResult, isError, toolCallId, ts: new Date() });
+        }
         if (isError) globalStats.errors++;
         _lastActivityTs = Date.now();
       } else if (phase === 'update') {
@@ -1606,6 +1640,8 @@ function refreshSessionList() {
 function showSession(sk) {
   if (activeSession && sessions.has(activeSession)) {
     sessions.get(activeSession).draft = document.getElementById('chat-input').value;
+    // Save scroll position so session switch can restore it later
+    sessions.get(activeSession)._scrollTop = document.getElementById('messages').scrollTop;
   }
 
   // Phase 1 & 2: Strip stale pending/loading events from previous session
@@ -1626,7 +1662,7 @@ function showSession(sk) {
   clearPendingState();
 
   const sess = sessions.get(sk);
-  if (sess) { sess._renderedCount = 0; sess._visibleBoundaries = 1; }
+  if (sess) { sess._renderedCount = 0; }
   _lastEventCount = -1;
   _filteredCacheHash = '';
 
@@ -1644,39 +1680,93 @@ function showSession(sk) {
 
 function fetchSessionHistory(sk) {
   const sess = sessions.get(sk);
-  const sessionKey = sk;
+  if (!sess) return;
 
-  if (sess.events.length > 0) return;
+  // If we already have full (non-truncated) events, skip the fetch
+  if (sess.events.length > 0 && !sess._truncated) return;
 
-  fetch('/api/session/' + encodeURIComponent(sessionKey))
+  // Load in batches to prevent freeze from massive DOM construction.
+  // Initial load: 300 events (fast); user can expand to full history.
+  const limit = sess._loadedLimit || 300;
+  const url = '/api/session/' + encodeURIComponent(sk) + '?limit=' + limit;
+
+  fetch(url)
     .then(res => res.json())
     .then(data => {
       const sess = sessions.get(sk);
       if (!sess) return;
 
-      const events = data.events || [];
+      const incomingEvents = data.events || [];
 
-      events.forEach(ev => {
+      // Replace events with REST data (which has more context than sync's 100)
+      sess.events = [];
+      sess._renderedCount = 0;
+
+      incomingEvents.forEach(ev => {
         ev.ts = new Date(ev.ts);
         sess.events.push(ev);
-
         if (ev.type === 'tool_start') globalStats.toolCalls++;
         if (ev.type === 'run_start') globalStats.llmCalls++;
         if (ev.type === 'run_error') globalStats.errors++;
       });
 
+      // Sort by timestamp
+      sess.events.sort((a, b) => (a.ts?.valueOf?.() || 0) - (b.ts?.valueOf?.() || 0));
+
+      // Track truncation state for "load more" UI
+      sess._truncated = !!data.truncated;
+      sess._totalEventCount = data.totalEventCount || sess.events.length;
+      sess._loadedLimit = limit;
+
       const actualCtx = calculateActualContext(sess.events);
-      sess.inputTokens = data.tokens?.inputTokens || 0;
-      sess.outputTokens = data.tokens?.outputTokens || 0;
-      sess.totalTokens = data.tokens?.totalTokens || 0;
-      sess.contextTokens = actualCtx || 0;
-      sess._visibleBoundaries = 1;
+      sess.inputTokens = data.tokens?.inputTokens || sess.inputTokens || 0;
+      sess.outputTokens = data.tokens?.outputTokens || sess.outputTokens || 0;
+      sess.totalTokens = data.tokens?.totalTokens || sess.totalTokens || 0;
+      sess.contextTokens = actualCtx || sess.contextTokens || 0;
 
       if (activeSession === sk) {
         showSessionContent(sess);
       }
     })
     .catch(err => console.error('Failed to load session history:', err));
+}
+
+// Load more older events for truncated sessions
+function loadMoreEvents() {
+  if (!activeSession) return;
+  const sess = sessions.get(activeSession);
+  if (!sess || !sess._truncated) return;
+
+  // Add 300 events each click to keep each render batch manageable
+  const nextLimit = Math.min((sess._loadedLimit || 300) + 300, sess._totalEventCount || 2000);
+  sess._loadedLimit = nextLimit;
+
+  const url = '/api/session/' + encodeURIComponent(activeSession) + '?limit=' + nextLimit;
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      const sess = sessions.get(activeSession);
+      if (!sess) return;
+
+      const incomingEvents = data.events || [];
+      sess.events = [];
+      sess._renderedCount = 0;
+
+      incomingEvents.forEach(ev => {
+        ev.ts = new Date(ev.ts);
+        sess.events.push(ev);
+        if (ev.type === 'tool_start') globalStats.toolCalls++;
+        if (ev.type === 'run_start') globalStats.llmCalls++;
+        if (ev.type === 'run_error') globalStats.errors++;
+      });
+
+      sess._truncated = !!data.truncated;
+      sess._totalEventCount = data.totalEventCount || sess.events.length;
+
+      _loadingOlderEvents = true;
+      showSessionContent(sess);
+    })
+    .catch(err => console.error('Failed to load more events:', err));
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -1695,7 +1785,18 @@ function getFilteredEvents(sess) {
 
   if (filter !== 'all') {
     if (filter === 'llm') events = events.filter(e => e.type === 'thinking' || e.type === 'assistant_text' || e.type === 'user_text');
-    else if (filter === 'minimal') events = events.filter(e => e.type === 'user_text' || e.type === 'assistant_text' || e.type === 'thinking' || e.type === 'tool_result');
+    else if (filter === 'minimal') events = events.filter(e => {
+      if (e.type === 'user_text' || e.type === 'assistant_text' || e.type === 'thinking') return true;
+      if (e.type === 'tool_start' && (e.toolName === 'image_generate' || e.toolName === 'sessions_spawn' || e.toolName === 'sessions_yield')) return true;
+      if (e.type === 'tool_result') {
+        if (e.toolName === 'image_generate') {
+          try { const parsed = parseToolResult(e.result); return parsed.details && parsed.details.status === 'completed'; } catch { return false; }
+        }
+        if (e.toolName === 'sessions_yield') return false;
+        return true;
+      }
+      return false;
+    });
     else if (filter === 'tool') events = events.filter(e => e.type === 'tool_start' || e.type === 'tool_result' || e.type === 'user_text');
     else if (filter === 'error') events = events.filter(e => e.type === 'run_error' || e.type === 'user_text');
   }
@@ -1731,6 +1832,22 @@ function getFilteredEvents(sess) {
 /* ──────────────────────────────────────────────────────────────────────────
    Section 10: Session Content Rendering
    ────────────────────────────────────────────────────────────────────────── */
+/* ── Safe event renderer wrapper (error boundary) ─────────────────────── */
+function renderEventSafe(ev, idx, forceExpand) {
+  try {
+    return renderEvent(ev, idx, forceExpand);
+  } catch (err) {
+    console.error('[render] Error rendering event', idx, ev.type, ev.toolName || '', err);
+    return '<div class="msg msg-run-error">'
+      + '<div class="msg-header">'
+      + '<span class="msg-role role-error">⚠ RENDER ERROR</span>'
+      + '</div>'
+      + '<div class="msg-content" style="color:var(--error)">'
+      + 'Failed to render ' + escHtml(ev.type || 'unknown') + (ev.toolName ? ' (' + escHtml(ev.toolName) + ')' : '') + ' event'
+      + '</div></div>';
+  }
+}
+
 function showSessionContent(sess) {
   const displayTotal = sess.totalTokens || 0;
   const titleEl = document.getElementById('content-title');
@@ -1777,18 +1894,6 @@ function showSessionContent(sess) {
   // Full unfiltered events for tool_start lookups (Minimal filter hides tool_start)
   window._fullSessionEvents = sess.events.map((ev) => ({ ...ev, cumTotal: displayTotal }));
 
-  // ── Lazy-load: determine slice point for visible boundaries ──
-  const maxBoundaries = sess._visibleBoundaries || 1;
-  let boundaryCount = 0;
-  let sliceFrom = 0;
-  for (let i = eventsWithCum.length - 1; i >= 0; i--) {
-    const ev = eventsWithCum[i];
-    if (ev.type === 'run_start' && ev.model === 'gateway-injected') {
-      boundaryCount++;
-      if (boundaryCount === maxBoundaries) { sliceFrom = i; break; }
-    }
-  }
-
   const msgsEl = document.getElementById('messages');
 
   const filterHash = filter + '|' + filterText;
@@ -1806,16 +1911,16 @@ function showSessionContent(sess) {
   }
 
   if (filterChanged || newCount < prevCount || prevCount === 0) {
-    // Full rebuild (with lazy-load slicing)
-    const rendered = sliceFrom > 0 ? eventsWithCum.slice(sliceFrom) : eventsWithCum;
+    // Full rebuild
+    const rendered = eventsWithCum;
     let html;
     const parts = [];
     let compacted = 0, skipped = 0;
     rendered.forEach((ev, idx) => {
-      const fullIdx = sliceFrom + idx;
+      const fullIdx = idx;
       if (ev.type === 'tool_start' || ev.type === 'tool_result') {
         const shouldExpand = isExpanded(ev);
-        parts.push(renderEvent(ev, fullIdx, shouldExpand));
+        parts.push(renderEventSafe(ev, fullIdx, shouldExpand));
         compacted++;
       } else if (ev.type === 'assistant_text' && /^\s*(\[tool:[^\]]*\]\s*)+$/.test(ev.text || '')) {
         skipped++;
@@ -1823,7 +1928,7 @@ function showSessionContent(sess) {
         skipped++;
       } else if (ev.type === 'run_start') {
         if (ev.model === 'gateway-injected') {
-          parts.push(renderEvent(ev, fullIdx));
+          parts.push(renderEventSafe(ev, fullIdx));
         } else {
           const row = renderCompactRow(ev, fullIdx, false);
           if (row) { parts.push(row); compacted++; }
@@ -1831,25 +1936,41 @@ function showSessionContent(sess) {
       } else if (ev.type === 'thinking' || ev.type === 'user_text' || ev.type === 'assistant_text') {
         const shouldExpand = isExpanded(ev);
         if (shouldExpand) {
-          parts.push(renderEvent(ev, fullIdx));
+          parts.push(renderEventSafe(ev, fullIdx));
         } else {
           const row = renderCompactRow(ev, fullIdx);
           if (row) { parts.push(row); compacted++; }
           else { skipped++; }
         }
       } else if (ev.type === 'run_error' || ev.type === 'loading') {
-        parts.push(renderEvent(ev, fullIdx));
+        parts.push(renderEventSafe(ev, fullIdx));
       }
     });
-    if (sliceFrom > 0) {
-      parts.unshift('<div class="load-more-sessions" onclick="loadPreviousSessionBoundary()">⬆ Load Previous Session</div>');
+    // Show "load older events" button if session was truncated by fetch limit
+    if (sess._truncated && sess._totalEventCount > sess.events.length) {
+      const remaining = sess._totalEventCount - (sess._loadedLimit || sess.events.length);
+      parts.unshift('<div class="load-more-sessions" onclick="loadMoreEvents()" style="margin-bottom:8px">⬆ Load older events (' + remaining + ' remaining)</div>');
     }
     html = parts.join('');
     const prevScrollTop = msgsEl.scrollTop;
     const prevScrollHeight = msgsEl.scrollHeight;
     msgsEl.innerHTML = html;
-    if (prevScrollHeight > 0 && msgsEl.scrollHeight > 0) {
-      msgsEl.scrollTop = Math.round(prevScrollTop * msgsEl.scrollHeight / prevScrollHeight);
+    if (prevCount === 0) {
+      // Session switch: restore saved scroll position or scroll to bottom
+      if (sess._scrollTop !== undefined && sess._scrollTop > 0) {
+        const maxScroll = msgsEl.scrollHeight - msgsEl.clientHeight;
+        msgsEl.scrollTop = Math.min(sess._scrollTop, maxScroll);
+      } else {
+        msgsEl.scrollTop = msgsEl.scrollHeight; // scroll to bottom
+      }
+    } else if (prevScrollHeight > 0 && msgsEl.scrollHeight > 0) {
+      if (_loadingOlderEvents) {
+        // Anchor to visible content: compensate for height added at top
+        msgsEl.scrollTop = prevScrollTop + (msgsEl.scrollHeight - prevScrollHeight);
+        _loadingOlderEvents = false;
+      } else {
+        msgsEl.scrollTop = Math.round(prevScrollTop * msgsEl.scrollHeight / prevScrollHeight);
+      }
     }
     sess._renderedCount = newCount;
   } else if (newCount > prevCount) {
@@ -1862,14 +1983,14 @@ function showSessionContent(sess) {
       const realIdx = prevCount + idx;
       if (ev.type === 'tool_start' || ev.type === 'tool_result') {
         const shouldExpand = isExpanded(ev);
-        html += renderEvent(ev, realIdx, shouldExpand);
+        html += renderEventSafe(ev, realIdx, shouldExpand);
       } else if (ev.type === 'assistant_text' && /^\s*(\[tool:[^\]]*\]\s*)+$/.test(ev.text || '')) {
         // Skip tool-call-only stubs
       } else if (ev.type === 'assistant_text' && ev.isIntermediate) {
         // Skip intermediate responses
       } else if (ev.type === 'run_start') {
         if (ev.model === 'gateway-injected') {
-          html += renderEvent(ev, realIdx);
+          html += renderEventSafe(ev, realIdx);
         } else {
           const row = renderCompactRow(ev, realIdx, false);
           if (row) html += row;
@@ -1877,13 +1998,13 @@ function showSessionContent(sess) {
       } else if (ev.type === 'thinking' || ev.type === 'user_text' || ev.type === 'assistant_text') {
         const shouldExpand = isExpanded(ev);
         if (shouldExpand) {
-          html += renderEvent(ev, realIdx);
+          html += renderEventSafe(ev, realIdx);
         } else {
           const row = renderCompactRow(ev, realIdx);
           if (row) html += row;
         }
       } else if (ev.type === 'run_error' || ev.type === 'loading') {
-        html += renderEvent(ev, realIdx);
+        html += renderEventSafe(ev, realIdx);
       }
     });
     container.innerHTML = html;
@@ -1909,6 +2030,12 @@ function showSessionContent(sess) {
     if (btn) btn.style.display = 'none';
   }
 
+  // Update previous-messages button when scrolled away from top
+  if (userScrolledDown) {
+    updatePrevMsgButton();
+  }
+
+  console.log('[render] showSessionContent complete:', sess._renderedCount, 'events rendered, filter:', filter);
   updateExpandMenu();
 }
 
@@ -2003,6 +2130,18 @@ function parseToolResult(resultStr) {
     return { text: String(resultStr), details: null, isEnvelope: false, isError: false };
   } catch {
     return { text: String(resultStr), details: null, isEnvelope: false, isError: false };
+  }
+}
+
+function tryParseToolResultEnvelope(str) {
+  try {
+    const obj = typeof str === 'string' ? JSON.parse(str) : str;
+    if (obj && typeof obj === 'object' && Array.isArray(obj.content)) {
+      return obj;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -2184,28 +2323,81 @@ function renderUnifiedDiff(patchText, filePath, idx) {
 function renderExecCommand(cmd) {
   if (!cmd) return '';
   const trimmed = cmd.trim();
-  const spaceIdx = trimmed.search(/\s/);
-  let cmdName, args;
-  if (spaceIdx === -1) { cmdName = trimmed; args = ''; }
-  else { cmdName = trimmed.slice(0, spaceIdx); args = trimmed.slice(spaceIdx + 1); }
 
-  let html = '<span class="cmd-name">' + escHtml(cmdName) + '</span>';
-  if (args) {
-    html += ' ';
-    const pathRe = /((?:~|\.\.?)?\/(?:[^\s"'`;|&<>()\[\]{}:]+\/?)+)/g;
-    let lastIdx = 0, match;
-    while ((match = pathRe.exec(args)) !== null) {
-      html += escHtml(args.slice(lastIdx, match.index));
-      const rawPath = match[1];
-      if (!rawPath.includes('://') && rawPath.length > 2 && !_blacklistedPaths.has(rawPath)) {
-        html += '<span class="file-link" onclick="event.stopPropagation();previewFileLink(this,\'' + escAttr(rawPath) + '\')" title="Preview: ' + escAttr(rawPath) + '">' + escHtml(rawPath) + '</span>';
-      } else {
-        html += escHtml(rawPath);
-      }
-      lastIdx = pathRe.lastIndex;
+  let html = '';
+  let i = 0;
+  let expectCmd = true;
+
+  while (i < trimmed.length) {
+    // Whitespace
+    if (trimmed[i] === ' ') { html += ' '; i++; continue; }
+
+    // Shell operators: &&, ||, |, ;
+    if (trimmed.slice(i, i + 2) === '&&') {
+      html += '<span style="color:var(--muted);">&&</span>';
+      i += 2; expectCmd = true;
+      while (i < trimmed.length && trimmed[i] === ' ') { html += ' '; i++; }
+      continue;
     }
-    html += escHtml(args.slice(lastIdx));
+    if (trimmed.slice(i, i + 2) === '||') {
+      html += '<span style="color:var(--muted);">||</span>';
+      i += 2; expectCmd = true;
+      while (i < trimmed.length && trimmed[i] === ' ') { html += ' '; i++; }
+      continue;
+    }
+    if (trimmed[i] === '|' && trimmed[i + 1] !== '|') {
+      html += '<span style="color:var(--muted);">|</span>';
+      i += 1; expectCmd = true;
+      while (i < trimmed.length && trimmed[i] === ' ') { html += ' '; i++; }
+      continue;
+    }
+    if (trimmed[i] === ';') {
+      html += '<span style="color:var(--muted);">;</span>';
+      i += 1; expectCmd = true;
+      while (i < trimmed.length && trimmed[i] === ' ') { html += ' '; i++; }
+      continue;
+    }
+    // Bare & (shell background or fd redirect, not &&)
+    if (trimmed[i] === '&') {
+      html += '<span style="color:var(--muted);">&amp;</span>';
+      i += 1; expectCmd = false;
+      while (i < trimmed.length && trimmed[i] === ' ') { html += ' '; i++; }
+      continue;
+    }
+
+    // Quoted string — skip through, don't highlight internals
+    if (trimmed[i] === '"' || trimmed[i] === "'") {
+      const q = trimmed[i];
+      let j = i + 1;
+      while (j < trimmed.length) {
+        if (trimmed[j] === '\\') { j += 2; continue; }
+        if (trimmed[j] === q) { j++; break; }
+        j++;
+      }
+      html += escHtml(trimmed.slice(i, j));
+      i = j;
+      expectCmd = false;
+      continue;
+    }
+
+    // Regular word
+    let j = i;
+    while (j < trimmed.length && trimmed[j] !== ' ' && trimmed[j] !== '&' &&
+           trimmed[j] !== '|' && trimmed[j] !== ';' &&
+           trimmed[j] !== '"' && trimmed[j] !== "'") j++;
+    const word = trimmed.slice(i, j);
+
+    if (expectCmd) {
+      html += '<span class="cmd-name">' + escHtml(word) + '</span>';
+      expectCmd = false;
+    } else if (/^[~.]?\//.test(word) && word.length > 2 && !word.includes('://') && !_blacklistedPaths.has(word)) {
+      html += '<span class="file-link" onclick="event.stopPropagation();previewFileLink(this,\'' + escAttr(word) + '\')" title="Preview: ' + escAttr(word) + '">' + escHtml(word) + '</span>';
+    } else {
+      html += escHtml(word);
+    }
+    i = j;
   }
+
   return html;
 }
 
@@ -2237,15 +2429,25 @@ function renderExecHeader(ev, parsed, t, idx, expanded) {
   const expandClass = (expanded || ev.isError) ? ' tr-expanded' : '';
   const errorClass = ev.isError ? ' tr-error' : '';
 
-  const codeClass = 'tr-code' + (ev.isError || (hasExitCode && !exitOk) ? ' tr-code-error' : '');
   const outputText = parsed.text || '';
-  const outputStats = formatOutputStats(outputText);
-  const bodyHtml = '<div class="tr-body">' +
-    (cmd ? '<div class="tr-cmd">$ ' + renderExecCommand(cmd) + '</div>' : '') +
-    (outputText ? '<div class="' + codeClass + '">' + escHtml(outputText) + '</div>' : '<div style="color:var(--muted);font-size:11px;">(no output)</div>') +
-    outputStats +
-    '<div class="tr-actions">' + trActionsHtml(idx) + '</div>' +
-  '</div>';
+  const errorStyle = (ev.isError || (hasExitCode && !exitOk)) ? ' style="color:var(--error);"' : '';
+  let bodyContent = '';
+  if (outputText) {
+    bodyContent = '<div class="udiff">' +
+      (cmd ? '<div class="udiff-file"><span>🔧</span> ' + escHtml(cmd) +
+        '<div class="tr-actions">' + trActionsHtml(idx) + '</div></div>' : '') +
+      outputText.split('\n').map(function(l) { return '<div class="udiff-ctx"' + errorStyle + '>' + escHtml(l) + '</div>'; }).join('') +
+      '</div>';
+  } else if (cmd) {
+    bodyContent = '<div class="udiff">' +
+      '<div class="udiff-file"><span>🔧</span> ' + escHtml(cmd) +
+        '<div class="tr-actions">' + trActionsHtml(idx) + '</div></div>' +
+      '<div class="udiff-ctx" style="color:var(--muted);font-style:italic;">(no output)</div>' +
+      '</div>';
+  } else {
+    bodyContent = '<div style="color:var(--muted);font-size:11px;padding:4px 0;">(no output)</div>';
+  }
+  const bodyHtml = '<div class="tr-body">' + bodyContent + '</div>';
 
   const stderrClass = ((hasExitCode && !exitOk) || ev.isError) ? ' tr-stderr' : '';
   return '<div class="tr-wrap' + errorClass + expandClass + stderrClass + '" data-idx="' + idx + '">' +
@@ -2487,6 +2689,408 @@ function renderUpdatePlanHeader(ev, parsed, t, idx, expanded) {
   '</div>';
 }
 
+/* ── image_generate / message / video_generate / music_generate (result) ─ */
+function renderImageGenResult(ev, parsed, t, idx, expanded) {
+  var d = parsed.details || {};
+  var action = d.action || 'generate';
+  var expandClass = expanded || ev.isError ? ' tr-expanded' : '';
+  var errorClass = ev.isError ? ' tr-error' : '';
+
+  // ── action=list: provider enumeration ──
+  if (action === 'list' && d.providers) {
+    var provRows = '';
+    for (var pi = 0; pi < d.providers.length; pi++) {
+      var p = d.providers[pi];
+      var cfgBadge = p.configured ? '<span style="color:#4ade80;">✅</span>' : '<span style="color:var(--muted);">⬜</span>';
+      var modes = (p.modes || []).join(', ');
+      var models = (p.models || []).join(', ');
+      provRows += '<div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;">' +
+        '<span style="font-weight:600;min-width:100px;">' + cfgBadge + ' ' + escHtml(p.label || p.id) + '</span>' +
+        '<span style="color:var(--muted);font-size:10px;">' +
+          '<span style="color:var(--info);">' + escHtml(p.id) + '</span>' +
+          (modes ? ' · modes: ' + escHtml(modes) : '') +
+          (models ? ' · models: ' + escHtml(models) : '') +
+        '</span></div>';
+    }
+    var bodyHtml = '<div style="padding:4px 0;">' + provRows + '</div>' +
+      '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+    return '<div class="tr-wrap' + expandClass + '" data-idx="' + idx + '">' +
+      '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+        '<span class="tr-tag tr-tag-tool">🖼️ image_gen</span>' +
+        '<span class="tr-tag" style="background:var(--accent);color:#000;">📋 ' + d.providers.length + ' providers</span>' +
+        '<span class="tr-time">' + t + '</span>' +
+      '</div>' +
+      '<div class="tr-body">' + bodyHtml + '</div>' +
+    '</div>';
+  }
+
+  // ── action=status: task check ──
+  if (action === 'status') {
+    var stIcon = d.active ? '⏳' : '✅';
+    var stLabel = (d.status || 'unknown') + (d.active ? ' (active)' : '');
+    var stParts = [];
+    if (d.provider) stParts.push(escHtml(d.provider));
+    if (d.progressSummary) stParts.push(escHtml(d.progressSummary));
+    var stDetail = stParts.length ? ' · ' + stParts.join(' · ') : '';
+
+    var stBody = '';
+    if (parsed.text) {
+      stBody += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
+    }
+    stBody += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+
+    return '<div class="tr-wrap' + expandClass + '" data-idx="' + idx + '">' +
+      '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+        '<span class="tr-tag tr-tag-tool">🖼️ image_gen</span>' +
+        '<span class="tr-tag" style="background:var(--info);color:#000;">' + stIcon + ' ' + escHtml(stLabel) + '</span>' +
+        (stDetail ? '<span style="color:var(--muted);font-size:10px;">' + stDetail + '</span>' : '') +
+        '<span class="tr-time">' + t + '</span>' +
+      '</div>' +
+      '<div class="tr-body">' + stBody + '</div>' +
+    '</div>';
+  }
+
+  // ── action=generate (async) ──
+  var statusIcon = d.status === 'started' ? '🔄' : d.status === 'running' ? '⏳' : d.status === 'completed' ? '✅' : d.status === 'failed' ? '❌' : '📋';
+  var statusLabel = d.status || 'unknown';
+
+  var detailParts = [];
+  if (d.async) detailParts.push('async');
+  if (d.provider) detailParts.push(escHtml(d.provider));
+  if (d.size) detailParts.push(escHtml(d.size));
+  if (d.outputFormat) detailParts.push(escHtml(d.outputFormat));
+  // For completed images, show linked filename; otherwise show task ID
+  if (d.status === 'completed' && d.mediaToken && d.filename) {
+    detailParts.push('<a href="/api/media/serve/' + escAttr(d.mediaToken) + '" target="_blank" style="color:var(--info);text-decoration:none;" onclick="event.stopPropagation()" title="View full image">.../' + escHtml(d.filename) + '</a>');
+  } else if (d.taskId) {
+    detailParts.push('task ' + escHtml(String(d.taskId).slice(0, 8) + '...'));
+  }
+  var detailHtml = detailParts.length ? ' · ' + detailParts.join(' · ') : '';
+
+  var bodyContent = '';
+
+  // LLM-generated caption from message tool completion
+  if (d.caption) {
+    bodyContent += '<div style="font-size:12px;color:var(--info);font-style:italic;margin-top:6px;padding:6px 8px;background:#1a1b26;border-left:3px solid var(--accent);border-radius:4px;">' +
+      '💬 ' + escHtml(d.caption) + '</div>';
+  }
+
+  // Completed media from async generation (virtual tool_result)
+  if (d.status === 'completed' && d.mediaToken) {
+    bodyContent += '<div style="margin-top:8px;text-align:center;">' +
+      '<img src="/api/media/serve/' + escAttr(d.mediaToken) + '" ' +
+        'style="max-width:100%;max-height:500px;border-radius:6px;display:block;cursor:pointer;" ' +
+        'alt="' + escAttr(d.prompt || 'Generated image') + '" ' +
+        'loading="lazy" ' +
+        'onclick="window.open(\'/api/media/serve/' + escAttr(d.mediaToken) + '\', \'_blank\')" ' +
+        'title="Click to view full size" />' +
+      (d.filename ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;">' + escHtml(d.filename) + '</div>' : '') +
+      '</div>';
+  }
+
+  if (d.status === 'failed') {
+    bodyContent += '<div style="color:var(--error);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' +
+      escHtml(parsed.text || 'Image generation failed') + '</div>';
+  } else if (parsed.text) {
+    bodyContent += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
+  }
+  bodyContent += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+
+  return '<div class="tr-wrap' + expandClass + errorClass + '" data-idx="' + idx + '">' +
+    '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+      '<span class="tr-tag tr-tag-tool">🖼️ image_gen</span>' +
+      '<span class="tr-tag" style="background:var(--info);color:#000;">' + statusIcon + ' ' + escHtml(statusLabel) + '</span>' +
+      (detailHtml ? '<span style="color:var(--muted);font-size:10px;">' + detailHtml + '</span>' : '') +
+      '<span class="tr-time">' + t + '</span>' +
+    '</div>' +
+    '<div class="tr-body">' + bodyContent + '</div>' +
+  '</div>';
+}
+
+function renderMessageResult(ev, parsed, t, idx, expanded) {
+  const d = parsed.details || {};
+  const deliveryIcon = d.deliveryStatus === 'sent' ? '✅' : d.deliveryStatus === 'failed' ? '❌' : '📤';
+  const deliveryLabel = d.deliveryStatus || d.status || 'unknown';
+  const expandClass = expanded || ev.isError ? ' tr-expanded' : '';
+
+  let detailParts = [];
+  if (d.channel) detailParts.push(escHtml(d.channel));
+  if (d.target) detailParts.push('→ ' + escHtml(d.target));
+  const detail = detailParts.length ? ' · ' + detailParts.join(' ') : '';
+
+  let bodyContent = '';
+  if (parsed.text) {
+    bodyContent += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
+  }
+  bodyContent += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+
+  return '<div class="tr-wrap' + expandClass + '" data-idx="' + idx + '">' +
+    '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+      '<span class="tr-tag tr-tag-tool">💬 message</span>' +
+      '<span class="tr-tag" style="background:var(--user);color:#000;">' + deliveryIcon + ' ' + escHtml(deliveryLabel) + '</span>' +
+      (detail ? '<span style="color:var(--muted);font-size:10px;">' + detail + '</span>' : '') +
+      '<span class="tr-time">' + t + '</span>' +
+    '</div>' +
+    '<div class="tr-body">' + bodyContent + '</div>' +
+  '</div>';
+}
+
+function renderVideoGenResult(ev, parsed, t, idx, expanded) {
+  var d = parsed.details || {};
+  var action = d.action || 'generate';
+  var expandClass = expanded || ev.isError ? ' tr-expanded' : '';
+  var errorClass = ev.isError ? ' tr-error' : '';
+
+  if (action === 'list' && d.providers) {
+    var provRows = '';
+    for (var pi = 0; pi < d.providers.length; pi++) {
+      var p = d.providers[pi];
+      var cfgBadge = p.configured ? '<span style="color:#4ade80;">✅</span>' : '<span style="color:var(--muted);">⬜</span>';
+      var models = (p.models || []).join(', ');
+      provRows += '<div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;">' +
+        '<span style="font-weight:600;min-width:100px;">' + cfgBadge + ' ' + escHtml(p.label || p.id) + '</span>' +
+        '<span style="color:var(--muted);font-size:10px;"><span style="color:var(--info);">' + escHtml(p.id) + '</span>' +
+        (models ? ' · models: ' + escHtml(models) : '') + '</span></div>';
+    }
+    var bodyHtml = '<div style="padding:4px 0;">' + provRows + '</div>' +
+      '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+    return '<div class="tr-wrap' + expandClass + '" data-idx="' + idx + '">' +
+      '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+        '<span class="tr-tag tr-tag-tool">🎬 video_gen</span>' +
+        '<span class="tr-tag" style="background:var(--accent);color:#000;">📋 ' + d.providers.length + ' providers</span>' +
+        '<span class="tr-time">' + t + '</span>' +
+      '</div>' +
+      '<div class="tr-body">' + bodyHtml + '</div>' +
+    '</div>';
+  }
+
+  if (action === 'status') {
+    var stIcon = d.active ? '⏳' : '✅';
+    var stLabel = (d.status || 'unknown') + (d.active ? ' (active)' : '');
+    var stParts = [];
+    if (d.provider) stParts.push(escHtml(d.provider));
+    if (d.progressSummary) stParts.push(escHtml(d.progressSummary));
+    var stDetail = stParts.length ? ' · ' + stParts.join(' · ') : '';
+    var stBody = '';
+    if (parsed.text) {
+      stBody += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
+    }
+    stBody += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+    return '<div class="tr-wrap' + expandClass + '" data-idx="' + idx + '">' +
+      '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+        '<span class="tr-tag tr-tag-tool">🎬 video_gen</span>' +
+        '<span class="tr-tag" style="background:var(--info);color:#000;">' + stIcon + ' ' + escHtml(stLabel) + '</span>' +
+        (stDetail ? '<span style="color:var(--muted);font-size:10px;">' + stDetail + '</span>' : '') +
+        '<span class="tr-time">' + t + '</span>' +
+      '</div>' +
+      '<div class="tr-body">' + stBody + '</div>' +
+    '</div>';
+  }
+
+  var statusIcon = d.status === 'started' ? '🔄' : d.status === 'running' ? '⏳' : d.status === 'completed' ? '✅' : d.status === 'failed' ? '❌' : '📋';
+  var statusLabel = d.status || 'unknown';
+  var detailParts = [];
+  if (d.async) detailParts.push('async');
+  if (d.provider) detailParts.push(escHtml(d.provider));
+  if (d.size) detailParts.push(escHtml(d.size));
+  if (d.durationSeconds) detailParts.push(d.durationSeconds + 's');
+  if (d.status === 'completed' && d.mediaToken && d.filename) {
+    detailParts.push('<a href="/api/media/serve/' + escAttr(d.mediaToken) + '" target="_blank" style="color:var(--info);text-decoration:none;" onclick="event.stopPropagation()" title="View media">.../' + escHtml(d.filename) + '</a>');
+  } else if (d.taskId) {
+    detailParts.push('task ' + escHtml(String(d.taskId).slice(0, 8) + '...'));
+  }
+  var detailHtml = detailParts.length ? ' · ' + detailParts.join(' · ') : '';
+
+  var bodyContent = '';
+
+  // LLM-generated caption from message tool completion
+  if (d.caption) {
+    bodyContent += '<div style="font-size:12px;color:var(--info);font-style:italic;margin-top:6px;padding:6px 8px;background:#1a1b26;border-left:3px solid var(--accent);border-radius:4px;">' +
+      '💬 ' + escHtml(d.caption) + '</div>';
+  }
+
+  // Completed media from async generation (virtual tool_result)
+  if (d.status === 'completed' && d.mediaToken) {
+    var mimeType = '';
+    try {
+      // Infer media type from filename extension
+      var ext = (d.filename || '').toLowerCase().split('.').pop();
+      mimeType = ['mp4','webm','mov','mkv','avi'].indexOf(ext) >= 0 ? 'video' : 'audio';
+    } catch(e) {}
+    if (mimeType === 'video') {
+      bodyContent += '<div style="margin-top:8px;">' +
+        '<video controls style="max-width:100%;max-height:400px;border-radius:6px;" ' +
+          'src="/api/media/serve/' + escAttr(d.mediaToken) + '" ' +
+          'title="' + escAttr(d.prompt || 'Generated video') + '"></video>' +
+        (d.filename ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;">' + escHtml(d.filename) + '</div>' : '') +
+        '</div>';
+    } else {
+      // Audio or unknown — show download link
+      bodyContent += '<div style="margin-top:8px;padding:8px;background:#1a1b26;border-radius:4px;">' +
+        '<a href="/api/media/serve/' + escAttr(d.mediaToken) + '" target="_blank" ' +
+          'style="color:var(--info);text-decoration:none;">' +
+          '⬇ Download ' + escHtml(d.filename || 'file') + '</a>' +
+        '</div>';
+    }
+  }
+
+  if (d.status === 'failed') {
+    bodyContent += '<div style="color:var(--error);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' +
+      escHtml(parsed.text || 'Video generation failed') + '</div>';
+  } else if (parsed.text) {
+    bodyContent += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
+  }
+  bodyContent += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+
+  return '<div class="tr-wrap' + expandClass + errorClass + '" data-idx="' + idx + '">' +
+    '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+      '<span class="tr-tag tr-tag-tool">🎬 video_gen</span>' +
+      '<span class="tr-tag" style="background:var(--info);color:#000;">' + statusIcon + ' ' + escHtml(statusLabel) + '</span>' +
+      (detailHtml ? '<span style="color:var(--muted);font-size:10px;">' + detailHtml + '</span>' : '') +
+      '<span class="tr-time">' + t + '</span>' +
+    '</div>' +
+    '<div class="tr-body">' + bodyContent + '</div>' +
+  '</div>';
+}
+
+function renderMusicGenResult(ev, parsed, t, idx, expanded) {
+  var d = parsed.details || {};
+  var action = d.action || 'generate';
+  var expandClass = expanded || ev.isError ? ' tr-expanded' : '';
+  var errorClass = ev.isError ? ' tr-error' : '';
+
+  if (action === 'list' && d.providers) {
+    var provRows = '';
+    for (var pi = 0; pi < d.providers.length; pi++) {
+      var p = d.providers[pi];
+      var cfgBadge = p.configured ? '<span style="color:#4ade80;">✅</span>' : '<span style="color:var(--muted);">⬜</span>';
+      var models = (p.models || []).join(', ');
+      provRows += '<div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;">' +
+        '<span style="font-weight:600;min-width:100px;">' + cfgBadge + ' ' + escHtml(p.label || p.id) + '</span>' +
+        '<span style="color:var(--muted);font-size:10px;"><span style="color:var(--info);">' + escHtml(p.id) + '</span>' +
+        (models ? ' · models: ' + escHtml(models) : '') + '</span></div>';
+    }
+    var bodyHtml = '<div style="padding:4px 0;">' + provRows + '</div>' +
+      '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+    return '<div class="tr-wrap' + expandClass + '" data-idx="' + idx + '">' +
+      '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+        '<span class="tr-tag tr-tag-tool">🎵 music_gen</span>' +
+        '<span class="tr-tag" style="background:var(--accent);color:#000;">📋 ' + d.providers.length + ' providers</span>' +
+        '<span class="tr-time">' + t + '</span>' +
+      '</div>' +
+      '<div class="tr-body">' + bodyHtml + '</div>' +
+    '</div>';
+  }
+
+  if (action === 'status') {
+    var stIcon = d.active ? '⏳' : '✅';
+    var stLabel = (d.status || 'unknown') + (d.active ? ' (active)' : '');
+    var stParts = [];
+    if (d.provider) stParts.push(escHtml(d.provider));
+    if (d.progressSummary) stParts.push(escHtml(d.progressSummary));
+    var stDetail = stParts.length ? ' · ' + stParts.join(' · ') : '';
+    var stBody = '';
+    if (parsed.text) {
+      stBody += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
+    }
+    stBody += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+    return '<div class="tr-wrap' + expandClass + '" data-idx="' + idx + '">' +
+      '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+        '<span class="tr-tag tr-tag-tool">🎵 music_gen</span>' +
+        '<span class="tr-tag" style="background:var(--info);color:#000;">' + stIcon + ' ' + escHtml(stLabel) + '</span>' +
+        (stDetail ? '<span style="color:var(--muted);font-size:10px;">' + stDetail + '</span>' : '') +
+        '<span class="tr-time">' + t + '</span>' +
+      '</div>' +
+      '<div class="tr-body">' + stBody + '</div>' +
+    '</div>';
+  }
+
+  var statusIcon = d.status === 'started' ? '🔄' : d.status === 'running' ? '⏳' : d.status === 'completed' ? '✅' : d.status === 'failed' ? '❌' : '📋';
+  var statusLabel = d.status || 'unknown';
+  var detailParts = [];
+  if (d.async) detailParts.push('async');
+  if (d.provider) detailParts.push(escHtml(d.provider));
+  if (d.durationSeconds) detailParts.push(d.durationSeconds + 's');
+  if (d.format) detailParts.push(escHtml(d.format));
+  if (d.status === 'completed' && d.mediaToken && d.filename) {
+    detailParts.push('<a href="/api/media/serve/' + escAttr(d.mediaToken) + '" target="_blank" style="color:var(--info);text-decoration:none;" onclick="event.stopPropagation()" title="View media">.../' + escHtml(d.filename) + '</a>');
+  } else if (d.taskId) {
+    detailParts.push('task ' + escHtml(String(d.taskId).slice(0, 8) + '...'));
+  }
+  var detailHtml = detailParts.length ? ' · ' + detailParts.join(' · ') : '';
+
+  var bodyContent = '';
+
+  // LLM-generated caption from message tool completion
+  if (d.caption) {
+    bodyContent += '<div style="font-size:12px;color:var(--info);font-style:italic;margin-top:6px;padding:6px 8px;background:#1a1b26;border-left:3px solid var(--accent);border-radius:4px;">' +
+      '💬 ' + escHtml(d.caption) + '</div>';
+  }
+
+  // Completed media from async generation (virtual tool_result)
+  if (d.status === 'completed' && d.mediaToken) {
+    bodyContent += '<div style="margin-top:8px;padding:8px;background:#1a1b26;border-radius:4px;">' +
+      '<audio controls style="width:100%;" src="/api/media/serve/' + escAttr(d.mediaToken) + '"></audio>' +
+      '<div style="font-size:10px;color:var(--muted);margin-top:4px;">' +
+        '<a href="/api/media/serve/' + escAttr(d.mediaToken) + '" target="_blank" ' +
+          'style="color:var(--info);text-decoration:none;">⬇ Download ' + escHtml(d.filename || 'file') + '</a>' +
+        '</div>' +
+      '</div>';
+  }
+
+  if (d.status === 'failed') {
+    bodyContent += '<div style="color:var(--error);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' +
+      escHtml(parsed.text || 'Music generation failed') + '</div>';
+  } else if (parsed.text) {
+    bodyContent += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
+  }
+  bodyContent += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+
+  return '<div class="tr-wrap' + expandClass + errorClass + '" data-idx="' + idx + '">' +
+    '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+      '<span class="tr-tag tr-tag-tool">🎵 music_gen</span>' +
+      '<span class="tr-tag" style="background:var(--info);color:#000;">' + statusIcon + ' ' + escHtml(statusLabel) + '</span>' +
+      (detailHtml ? '<span style="color:var(--muted);font-size:10px;">' + detailHtml + '</span>' : '') +
+      '<span class="tr-time">' + t + '</span>' +
+    '</div>' +
+    '<div class="tr-body">' + bodyContent + '</div>' +
+  '</div>';
+}
+
+/* ── sessions_spawn (result) ─────────────────────────────────── */
+function renderSpawnResult(ev, parsed, t, idx, expanded) {
+  var d = parsed.details || {};
+  var childSessionKey = d.childSessionKey || d.sessionKey || '';
+  var label = d.label || d.taskName || '';
+  var sessionExists = childSessionKey && sessions.has(childSessionKey);
+  var shortKey = childSessionKey ? (childSessionKey.length > 25 ? childSessionKey.slice(0, 22) + '...' : childSessionKey) : '';
+
+  var childBadge = '';
+  if (childSessionKey) {
+    if (sessionExists) {
+      childBadge = '<span class="tr-tag" style="cursor:pointer;background:var(--assistant);color:#000;" onclick="event.stopPropagation();showSession(\'' + escAttr(childSessionKey) + '\')" title="Switch to spawned session: ' + escAttr(childSessionKey) + '">🚀 ' + escHtml(label || shortKey) + '</span>';
+    } else {
+      childBadge = '<span class="tr-tag" style="background:var(--border);color:var(--muted);" title="Session may have ended or been deleted">🚀 ' + escHtml(label || shortKey) + '</span>';
+    }
+  }
+
+  var bodyHtml = '';
+  if (parsed.text) {
+    bodyHtml += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
+  }
+  bodyHtml += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+
+  return '<div class="tr-wrap' + (expanded || ev.isError ? ' tr-expanded' : '') + (ev.isError ? ' tr-error' : '') + '" data-idx="' + idx + '">' +
+    '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
+      '<span class="tr-tag tr-tag-tool">🚀 spawn</span>' +
+      (ev.isError ? '<span style="color:var(--error);font-weight:700;font-size:10px;">✖ error</span>' : '<span class="tr-tag ok">✅</span>') +
+      childBadge +
+      '<span class="tr-time">' + t + '</span>' +
+    '</div>' +
+    '<div class="tr-body">' + bodyHtml + '</div>' +
+  '</div>';
+}
+
 function renderGenericHeader(ev, parsed, t, idx, expanded) {
   return '<div class="tr-wrap' + (ev.isError ? ' tr-error' : '') + (expanded || ev.isError ? ' tr-expanded' : '') + '" data-idx="' + idx + '">' +
     '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
@@ -2694,6 +3298,10 @@ function renderToolCall(ev, idx, forceExpand) {
     case 'process':        html = renderProcessCall(ev, inp, idx); break;
     case 'memory_search':  html = renderMemSearchCall(ev, inp, idx); break;
     case 'memory_get':     html = renderMemGetCall(ev, inp, idx); break;
+    case 'image_generate': html = renderImageGenCall(ev, inp, idx); break;
+    case 'message':        html = renderMessageCall(ev, inp, idx); break;
+    case 'video_generate': html = renderVideoGenCall(ev, inp, idx); break;
+    case 'music_generate': html = renderMusicGenCall(ev, inp, idx); break;
     default:               html = renderGenericCall(ev, inp, idx); break;
   }
   if (forceExpand && html) {
@@ -2815,15 +3423,14 @@ function renderSpawnCall(ev, inp, idx) {
   if (modelShort) content += ' · ' + escHtml(modelShort);
   const header = '🚀 <span class="tc-name">spawn</span> <span class="tc-preview">' + content + '</span>';
   const rows = [];
-  rows.push(['📋 task', '<div class="tc-task-body">' + escHtml(task) + '</div>']);
+  rows.push(['📋 task', task.split('\n').map(function(l) { return escHtml(l); }).join('<br>')]);
   if (inp.taskName) rows.push(['🏷 taskName', escHtml(inp.taskName)]);
   if (inp.model) rows.push(['🤖 model', escHtml(inp.model)]);
   if (inp.cwd) rows.push(['📂 cwd', escHtml(inp.cwd)]);
   if (inp.context) rows.push(['🔗 context', escHtml(inp.context)]);
   if (inp.timeoutSeconds) rows.push(['⏱ timeout', inp.timeoutSeconds + 's']);
   const actions = tcCopyBtn(task) + tcJsonBtn(idx);
-  const expandedClass = task.length > 200 ? ' tc-expanded' : '';
-  return '<div class="tc-wrap' + expandedClass + '">' +
+  return '<div class="tc-wrap tc-spawn">' +
     '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">' + header + '<span class="tc-chev">▼</span></div>' +
     buildTcBody(rows, actions) +
     '</div>';
@@ -2897,6 +3504,211 @@ function renderMemGetCall(ev, inp, idx) {
     '</div>';
 }
 
+/* ── image_generate / video_generate / music_generate (call) ─────────── */
+function renderImageGenCall(ev, inp, idx) {
+  const action = inp.action || 'generate';
+  const prompt = inp.prompt || '';
+
+  // action=list: enumerate providers
+  if (action === 'list') {
+    const header = '🖼️ <span class="tc-name">image_gen</span> <span class="tc-preview">list providers</span>';
+    const rows = [['🔄 action', 'list (enumerate providers/models)']];
+    return '<div class="tc-wrap tc-media">' +
+      '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">' + header + '<span class="tc-chev">▼</span></div>' +
+      buildTcBody(rows, tcJsonBtn(idx)) +
+      '</div>';
+  }
+
+  // action=status: check active task
+  if (action === 'status') {
+    const header = '🖼️ <span class="tc-name">image_gen</span> <span class="tc-preview">check status</span>';
+    const rows = [['🔄 action', 'status (check active generation task)']];
+    return '<div class="tc-wrap tc-media">' +
+      '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">' + header + '<span class="tc-chev">▼</span></div>' +
+      buildTcBody(rows, tcJsonBtn(idx)) +
+      '</div>';
+  }
+
+  // action=generate (default)
+  const preview = prompt.length > 80 ? prompt.slice(0, 77) + '...' : prompt;
+  const parts = [];
+  if (inp.model) parts.push(escHtml(shortModel(inp.model)));
+  if (inp.size) parts.push(escHtml(inp.size));
+  if (inp.aspectRatio) parts.push(escHtml(inp.aspectRatio));
+  if (inp.resolution) parts.push(escHtml(inp.resolution));
+  if (inp.count > 1) parts.push('×' + inp.count);
+  if (inp.quality && inp.quality !== 'auto') parts.push(escHtml(inp.quality));
+  var hasRef = !!(inp.image || (inp.images && inp.images.length));
+  if (hasRef) parts.push('📎ref');
+  var extra = parts.length ? ' · ' + parts.join(' ') : '';
+  var header = '🖼️ <span class="tc-name">image_gen</span> <span class="tc-preview">"' + escHtml(preview || '(no prompt)') + '"</span>' + extra;
+
+  var rows = [];
+  if (inp.prompt) rows.push(['🖼️ prompt', escHtml(inp.prompt)]);
+  if (inp.model) rows.push(['🤖 model', escHtml(inp.model)]);
+  if (inp.size) rows.push(['📐 size', escHtml(inp.size)]);
+  if (inp.aspectRatio) rows.push(['📏 aspect', escHtml(inp.aspectRatio)]);
+  if (inp.resolution) rows.push(['🔍 resolution', escHtml(inp.resolution)]);
+  if (inp.quality) rows.push(['✨ quality', escHtml(inp.quality)]);
+  if (inp.outputFormat) rows.push(['📋 format', escHtml(inp.outputFormat)]);
+  if (inp.background) rows.push(['🎨 background', escHtml(inp.background)]);
+  if (inp.count && inp.count > 0) rows.push(['🔢 count', String(inp.count)]);
+  if (inp.filename) rows.push(['📄 filename', escHtml(inp.filename)]);
+  if (inp.timeoutMs) rows.push(['⏱ timeout', inp.timeoutMs + 'ms']);
+  // reference images
+  if (inp.image) rows.push(['🖼️ reference', escHtml(inp.image)]);
+  if (inp.images && inp.images.length) {
+    for (var ri = 0; ri < inp.images.length; ri++) {
+      rows.push(['🖼️ ref[' + (ri + 1) + ']', escHtml(inp.images[ri])]);
+    }
+  }
+  // OpenAI-specific options
+  if (inp.openai && typeof inp.openai === 'object') {
+    if (inp.openai.background) rows.push(['🤖 openai:bg', escHtml(inp.openai.background)]);
+    if (inp.openai.moderation) rows.push(['🤖 openai:mod', escHtml(inp.openai.moderation)]);
+    if (inp.openai.outputCompression != null) rows.push(['🤖 openai:comp', String(inp.openai.outputCompression)]);
+    if (inp.openai.user) rows.push(['🤖 openai:user', escHtml(inp.openai.user)]);
+  }
+  // fal-specific options
+  if (inp.fal && typeof inp.fal === 'object') {
+    if (inp.fal.creativity) rows.push(['🎨 fal:creativity', escHtml(inp.fal.creativity)]);
+  }
+
+  return '<div class="tc-wrap tc-media">' +
+    '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">' + header + '<span class="tc-chev">▼</span></div>' +
+    buildTcBody(rows, tcCopyBtn(prompt) + tcJsonBtn(idx)) +
+    '</div>';
+}
+
+function renderMessageCall(ev, inp, idx) {
+  const msg = inp.message || '';
+  const preview = msg.length > 80 ? msg.slice(0, 77) + '...' : msg;
+  const hasFile = !!inp.filePath;
+  const header = '💬 <span class="tc-name">message</span> <span class="tc-preview">"' + escHtml(preview || '(no message)') + '"</span>' +
+    (hasFile ? ' 📎 <span style="color:var(--info);font-size:10px;">file</span>' : '');
+  const rows = [];
+  if (inp.message) rows.push(['💬 message', escHtml(inp.message)]);
+  if (inp.channel) rows.push(['📡 channel', escHtml(inp.channel)]);
+  if (inp.to) rows.push(['👤 to', escHtml(inp.to)]);
+  if (inp.filePath) rows.push(['📎 file', escHtml(inp.filePath)]);
+  if (inp.sessionKey) rows.push(['🔑 session', escHtml(inp.sessionKey)]);
+  const actions = tcCopyBtn(msg) + tcJsonBtn(idx);
+  return '<div class="tc-wrap tc-msg">' +
+    '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">' + header + '<span class="tc-chev">▼</span></div>' +
+    buildTcBody(rows, actions) +
+    '</div>';
+}
+
+function renderVideoGenCall(ev, inp, idx) {
+  var action = inp.action || 'generate';
+  var prompt = inp.prompt || '';
+
+  if (action === 'list') {
+    return '<div class="tc-wrap tc-media">' +
+      '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">🎬 <span class="tc-name">video_gen</span> <span class="tc-preview">list providers</span><span class="tc-chev">▼</span></div>' +
+      buildTcBody([['🔄 action', 'list (enumerate providers/models)']], tcJsonBtn(idx)) +
+      '</div>';
+  }
+  if (action === 'status') {
+    return '<div class="tc-wrap tc-media">' +
+      '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">🎬 <span class="tc-name">video_gen</span> <span class="tc-preview">check status</span><span class="tc-chev">▼</span></div>' +
+      buildTcBody([['🔄 action', 'status (check active generation task)']], tcJsonBtn(idx)) +
+      '</div>';
+  }
+
+  var preview = prompt.length > 80 ? prompt.slice(0, 77) + '...' : prompt;
+  var parts = [];
+  if (inp.model) parts.push(escHtml(shortModel(inp.model)));
+  if (inp.size) parts.push(escHtml(inp.size));
+  if (inp.aspectRatio) parts.push(escHtml(inp.aspectRatio));
+  if (inp.resolution) parts.push(escHtml(inp.resolution));
+  if (inp.durationSeconds) parts.push(inp.durationSeconds + 's');
+  if (inp.audio) parts.push('🔊');
+  if (inp.watermark) parts.push('💧');
+  var hasRef = !!(inp.image || (inp.images && inp.images.length));
+  if (hasRef) parts.push('📎ref');
+  var extra = parts.length ? ' · ' + parts.join(' ') : '';
+  var header = '🎬 <span class="tc-name">video_gen</span> <span class="tc-preview">"' + escHtml(preview || '(no prompt)') + '"</span>' + extra;
+
+  var rows = [];
+  if (inp.prompt) rows.push(['🎬 prompt', escHtml(inp.prompt)]);
+  if (inp.model) rows.push(['🤖 model', escHtml(inp.model)]);
+  if (inp.size) rows.push(['📐 size', escHtml(inp.size)]);
+  if (inp.aspectRatio) rows.push(['📏 aspect', escHtml(inp.aspectRatio)]);
+  if (inp.resolution) rows.push(['🔍 resolution', escHtml(inp.resolution)]);
+  if (inp.durationSeconds) rows.push(['⏱ duration', inp.durationSeconds + 's']);
+  if (inp.audio !== undefined) rows.push(['🔊 audio', inp.audio ? 'yes' : 'no']);
+  if (inp.watermark !== undefined) rows.push(['💧 watermark', inp.watermark ? 'yes' : 'no']);
+  if (inp.filename) rows.push(['📄 filename', escHtml(inp.filename)]);
+  if (inp.timeoutMs) rows.push(['⏱ timeout', inp.timeoutMs + 'ms']);
+  if (inp.image) rows.push(['🖼️ reference', escHtml(inp.image)]);
+  if (inp.images && inp.images.length) {
+    for (var ri = 0; ri < inp.images.length; ri++) {
+      rows.push(['🖼️ ref[' + (ri + 1) + ']', escHtml(inp.images[ri])]);
+    }
+  }
+  if (inp.video) rows.push(['🎬 video ref', escHtml(inp.video)]);
+  if (inp.videos && inp.videos.length) {
+    for (var vi = 0; vi < inp.videos.length; vi++) {
+      rows.push(['🎬 vref[' + (vi + 1) + ']', escHtml(inp.videos[vi])]);
+    }
+  }
+
+  return '<div class="tc-wrap tc-media">' +
+    '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">' + header + '<span class="tc-chev">▼</span></div>' +
+    buildTcBody(rows, tcCopyBtn(prompt) + tcJsonBtn(idx)) +
+    '</div>';
+}
+
+function renderMusicGenCall(ev, inp, idx) {
+  var action = inp.action || 'generate';
+  var prompt = inp.prompt || '';
+  var lyrics = inp.lyrics || '';
+
+  if (action === 'list') {
+    return '<div class="tc-wrap tc-media">' +
+      '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">🎵 <span class="tc-name">music_gen</span> <span class="tc-preview">list providers</span><span class="tc-chev">▼</span></div>' +
+      buildTcBody([['🔄 action', 'list (enumerate providers/models)']], tcJsonBtn(idx)) +
+      '</div>';
+  }
+  if (action === 'status') {
+    return '<div class="tc-wrap tc-media">' +
+      '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">🎵 <span class="tc-name">music_gen</span> <span class="tc-preview">check status</span><span class="tc-chev">▼</span></div>' +
+      buildTcBody([['🔄 action', 'status (check active generation task)']], tcJsonBtn(idx)) +
+      '</div>';
+  }
+
+  var preview = prompt.length > 80 ? prompt.slice(0, 77) + '...' : (lyrics.length > 80 ? lyrics.slice(0, 77) + '...' : (prompt || lyrics));
+  var parts = [];
+  if (inp.model) parts.push(escHtml(shortModel(inp.model)));
+  if (inp.durationSeconds) parts.push(inp.durationSeconds + 's');
+  if (inp.instrumental) parts.push('instrumental');
+  var hasRef = !!(inp.image || (inp.images && inp.images.length));
+  if (hasRef) parts.push('📎ref');
+  var extra = parts.length ? ' · ' + parts.join(' ') : '';
+  var header = '🎵 <span class="tc-name">music_gen</span> <span class="tc-preview">"' + escHtml(preview || '(no prompt)') + '"</span>' + extra;
+
+  var rows = [];
+  if (inp.prompt) rows.push(['🎵 prompt', escHtml(inp.prompt)]);
+  if (inp.lyrics) rows.push(['🎤 lyrics', escHtml(inp.lyrics)]);
+  if (inp.model) rows.push(['🤖 model', escHtml(inp.model)]);
+  if (inp.durationSeconds) rows.push(['⏱ duration', inp.durationSeconds + 's']);
+  if (inp.instrumental !== undefined) rows.push(['🎹 instrumental', inp.instrumental ? 'yes' : 'no']);
+  if (inp.format) rows.push(['📋 format', escHtml(inp.format)]);
+  if (inp.filename) rows.push(['📄 filename', escHtml(inp.filename)]);
+  if (inp.image) rows.push(['🖼️ reference', escHtml(inp.image)]);
+  if (inp.images && inp.images.length) {
+    for (var ri = 0; ri < inp.images.length; ri++) {
+      rows.push(['🖼️ ref[' + (ri + 1) + ']', escHtml(inp.images[ri])]);
+    }
+  }
+
+  return '<div class="tc-wrap tc-media">' +
+    '<div class="tc-header" onclick="toggleToolCall(this,' + idx + ')">' + header + '<span class="tc-chev">▼</span></div>' +
+    buildTcBody(rows, tcCopyBtn(prompt || lyrics) + tcJsonBtn(idx)) +
+    '</div>';
+}
+
 function renderGenericCall(ev, inp, idx) {
   const name = escHtml(ev.toolName || 'unknown');
   const keys = Object.keys(inp).filter(function(k) { return k !== '_raw'; });
@@ -2946,7 +3758,7 @@ function renderEvent(ev, idx, forceExpand) {
     const text = clipped ? ev.text.slice(0, 2000) + '\n\n... [truncated]' : ev.text;
     return '<div class="msg msg-thinking">' +
       '<div class="msg-header">' +
-        '<span class="msg-role role-system" onclick="showJsonViewer(' + idx + ')" style="cursor:pointer;background:#a855f7;color:#fff;" title="Click to view JSON">💭</span>' +
+        '<span class="msg-role role-system" onclick="event.stopPropagation();showJsonViewer(' + idx + ')" style="cursor:pointer;background:#a855f7;color:#fff;" title="Click to view JSON">💭</span>' +
         '<span class="msg-time">' + t + '</span>' +
       '</div>' +
       '<div class="msg-content' + (clipped ? ' clipped' : '') + '" style="color:var(--muted);">' + escHtml(text) + '</div>' +
@@ -2956,7 +3768,7 @@ function renderEvent(ev, idx, forceExpand) {
   if (ev.type === 'assistant_text') {
     return '<div class="msg msg-assistant">' +
       '<div class="msg-header">' +
-        '<span class="msg-role role-assistant" onclick="showJsonViewer(' + idx + ')" style="cursor:pointer;" title="Click to view JSON">🤖💬</span>' +
+        '<span class="msg-role role-assistant" onclick="event.stopPropagation();showJsonViewer(' + idx + ')" style="cursor:pointer;" title="Click to view JSON">🤖💬</span>' +
         '<span class="msg-time">' + t + '</span>' +
       '</div>' +
       '<div class="md-content">' + renderMarkdown(ev.text || '') + '</div>' +
@@ -2968,7 +3780,7 @@ function renderEvent(ev, idx, forceExpand) {
     const pendingClass = ev.pending ? ' pending' : (ev.delivered ? ' delivered' : '');
     return '<div class="msg msg-user' + pendingClass + '">' +
       '<div class="msg-header">' +
-        '<span class="msg-role role-user" onclick="showJsonViewer(' + idx + ')" style="cursor:pointer;" title="Click to view JSON">👤 USER</span>' +
+        '<span class="msg-role role-user" onclick="event.stopPropagation();showJsonViewer(' + idx + ')" style="cursor:pointer;" title="Click to view JSON">👤 USER</span>' +
         '<span class="msg-time">' + t + '</span>' +
       '</div>' +
       '<div class="msg-content">' + escHtml(fullText) + '</div>' +
@@ -2989,7 +3801,7 @@ function renderEvent(ev, idx, forceExpand) {
 
   if (ev.type === 'run_start') {
     if (ev.model === 'gateway-injected') {
-      return '<div class="session-divider">── ◈ SESSION START ◈ ──' +
+      return '<div class="session-divider" onclick="jumpToSessionTop(this)" title="Click to focus this session">── ◈ SESSION START ◈ ──' +
         '<span style="margin-left:12px;font-weight:400;color:var(--muted);">' + t + '</span></div>';
     }
     let meta = [];
@@ -3068,6 +3880,11 @@ function renderToolResult(ev, idx, expanded) {
     case 'process':  return renderProcessHeader(ev, parsed, t, idx, expanded);
     case 'memory_search': return renderMemorySearchHeader(ev, parsed, t, idx, expanded);
     case 'update_plan':   return renderUpdatePlanHeader(ev, parsed, t, idx, expanded);
+    case 'image_generate': return renderImageGenResult(ev, parsed, t, idx, expanded);
+    case 'message':        return renderMessageResult(ev, parsed, t, idx, expanded);
+    case 'video_generate': return renderVideoGenResult(ev, parsed, t, idx, expanded);
+    case 'music_generate': return renderMusicGenResult(ev, parsed, t, idx, expanded);
+    case 'sessions_spawn':  return renderSpawnResult(ev, parsed, t, idx, expanded);
     default:         return renderGenericHeader(ev, parsed, t, idx, expanded);
   }
 }
@@ -3149,7 +3966,17 @@ function expandCompactRow(el, idx) {
     el.onclick = null;
     return;
   }
-  el.outerHTML = html;
+  el.outerHTML = '<div class="expandable-card expanded" data-idx="' + idx + '" onclick="collapseCompactRow(this)" title="Click to collapse">' +
+    html + '</div>';
+}
+
+function collapseCompactRow(wrapper) {
+  const idx = parseInt(wrapper.getAttribute('data-idx'));
+  if (isNaN(idx)) return;
+  const ev = sessionEvents && sessionEvents[idx];
+  if (!ev) return;
+  const row = renderCompactRow(ev, idx, true);
+  if (row) wrapper.outerHTML = row;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -3173,7 +4000,7 @@ function clearSessionEvents() {
       sess.events = events;
       sess.messages = data.messages || [];
       sess._renderedCount = 0;
-      sess._visibleBoundaries = 1;
+      sess._scrollTop = undefined; // reset — old position invalid after clear
       sess.tokens = data.tokens || {};
       sess.totalTokens = data.tokens?.totalTokens || 0;
       sess.inputTokens = data.tokens?.inputTokens || 0;
@@ -3188,16 +4015,6 @@ function clearSessionEvents() {
     .catch(err => {
       console.error('[clearSessionEvents] Failed:', err);
     });
-}
-
-function loadPreviousSessionBoundary() {
-  const sess = sessions.get(activeSession);
-  if (!sess) return;
-  sess._visibleBoundaries = (sess._visibleBoundaries || 1) + 1;
-  sess._renderedCount = 0;
-  _lastFilterHash = '';
-  _filteredCacheHash = '';
-  scheduleUIUpdate(true, true);
 }
 
 function sendNewSession() {
@@ -4097,8 +4914,91 @@ function showNewMsgButton() {
   const btn = document.getElementById('new-msg-btn');
   if (btn) {
     btn.style.display = 'block';
-    btn.textContent = pendingNewMessages > 1 ? '\u2193 ' + pendingNewMessages + ' new messages' : '\u2193 New messages';
+    if (pendingNewMessages > 0) {
+      btn.textContent = pendingNewMessages > 1 ? '\u2193 ' + pendingNewMessages + ' new messages' : '\u2193 New messages';
+    } else {
+      btn.textContent = '\u2193 Jump to bottom';
+    }
   }
+}
+
+function jumpToPrevUser() {
+  const msgsEl = document.getElementById('messages');
+  if (!msgsEl) return;
+  const el = findPreviousUserEl();
+  if (!el) {
+    // Fallback: scroll to top if no user message found
+    _programmaticScroll = true;
+    msgsEl.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => { _programmaticScroll = false; }, 300);
+  } else {
+    _programmaticScroll = true;
+    // Offset for the floating prev-msg-btn height + padding so the user message is visible below it
+    const btn = document.getElementById('prev-msg-btn');
+    const btnOffset = btn ? btn.offsetHeight + 36 : 64;
+    const targetTop = Math.max(0, el.offsetTop - btnOffset);
+    msgsEl.scrollTo({ top: targetTop, behavior: 'smooth' });
+    setTimeout(() => { _programmaticScroll = false; }, 300);
+  }
+  userScrolledDown = false;
+  const btn = document.getElementById('prev-msg-btn');
+  if (btn) btn.style.display = 'none';
+}
+
+function findPreviousUserEl() {
+  const msgsEl = document.getElementById('messages');
+  if (!msgsEl) return null;
+  const threshold = msgsEl.scrollTop;
+  let best = null;
+  for (const child of msgsEl.children) {
+    if (child.classList.contains('msg-user') || child.classList.contains('compact-user')) {
+      const elBottom = child.offsetTop + child.offsetHeight;
+      if (elBottom < threshold + 10) {
+        if (!best || child.offsetTop > best.offsetTop) best = child;
+      }
+    }
+  }
+  return best;
+}
+
+function updatePrevMsgButton() {
+  const btn = document.getElementById('prev-msg-btn');
+  const msgsEl = document.getElementById('messages');
+  const contentEl = document.getElementById('content');
+  if (!btn || !msgsEl || !contentEl) return;
+
+  // Position the button at the top of the messages area
+  const msgsRect = msgsEl.getBoundingClientRect();
+  const contentRect = contentEl.getBoundingClientRect();
+  btn.style.top = (msgsRect.top - contentRect.top + 8) + 'px';
+
+  if (userScrolledDown) {
+    const prevUser = findPreviousUserEl();
+    if (prevUser) {
+      btn.style.display = 'block';
+      const count = countMessagesToPrevUser(prevUser);
+      btn.textContent = count > 1 ? '\u2191 ' + count + ' above \u00b7 your message' : '\u2191 Your message';
+    } else {
+      // No user message above — show generic jump-to-top
+      btn.style.display = 'block';
+      btn.textContent = '\u2191 Top';
+    }
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+function countMessagesToPrevUser(prevUserEl) {
+  const msgsEl = document.getElementById('messages');
+  if (!msgsEl || !prevUserEl) return 0;
+  let count = 0;
+  for (const child of msgsEl.children) {
+    if (child === prevUserEl) break;
+    if (child.offsetTop + child.offsetHeight * 0.5 >= msgsEl.scrollTop) count++;
+  }
+  // Include the user message itself
+  count++;
+  return count;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -4122,6 +5022,11 @@ function copyJsonViewer() {
   if (jsonViewerEvent) {
     navigator.clipboard.writeText(JSON.stringify(jsonViewerEvent, null, 2));
   }
+}
+
+// Scroll a session divider to the top of the viewport to focus that session
+function jumpToSessionTop(el) {
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -4157,14 +5062,47 @@ document.getElementById('filter-text').oninput = (e) => {
 const msgsEl = document.getElementById('messages');
 msgsEl.addEventListener('scroll', () => {
   if (_programmaticScroll) return;
+
+  // Compute scroll direction
+  const scrollingDown = msgsEl.scrollTop > _lastScrollTop;
+  const scrollingUp = msgsEl.scrollTop < _lastScrollTop;
+  _lastScrollTop = msgsEl.scrollTop;
+
+  // Update active session's scroll position in real time
+  if (activeSession && sessions.has(activeSession)) {
+    sessions.get(activeSession)._scrollTop = msgsEl.scrollTop;
+  }
+
+  // Bottom button: show when scrolling down away from bottom
   const atBottom = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 80;
   if (atBottom) {
     userScrolledUp = false;
     pendingNewMessages = 0;
     const btn = document.getElementById('new-msg-btn');
     if (btn) btn.style.display = 'none';
-  } else {
+  } else if (scrollingUp) {
     userScrolledUp = true;
+    // Hide when scrolling up unless new messages arrived
+    if (pendingNewMessages === 0) {
+      const btn = document.getElementById('new-msg-btn');
+      if (btn) btn.style.display = 'none';
+    }
+  } else {
+    // Scrolling down and away from bottom
+    userScrolledUp = true;
+    showNewMsgButton();
+  }
+
+  // Top button: show when scrolling up away from top
+  const atTop = msgsEl.scrollTop < 80;
+  if (atTop || scrollingDown) {
+    userScrolledDown = false;
+    const pbtn = document.getElementById('prev-msg-btn');
+    if (pbtn) pbtn.style.display = 'none';
+  } else {
+    // Scrolling up and away from top
+    userScrolledDown = true;
+    updatePrevMsgButton();
   }
 });
 
@@ -4219,7 +5157,7 @@ window.addEventListener('resize', () => {
   }
 });
 
-// Initialize
+// Initialize — auto-connect on page load
 connect();
 updateHistoryButton();
 </script>

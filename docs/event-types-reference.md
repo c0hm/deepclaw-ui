@@ -390,7 +390,11 @@ Optimistic placeholder shown while waiting for a response.
 ## Choosing What to Display
 
 ### For a minimalist view:
-- Show only: `user_text`, `assistant_text`, `tool_result`, `run_error`
+- Show: `user_text`, `assistant_text`, `thinking`, `tool_result`
+- Also show `tool_start` for `image_generate`, `sessions_spawn`, `sessions_yield` (so prompt/task/message is readable)
+- For `image_generate` `tool_result`, show only when `status: completed` (hide intermediate/running states)
+- For `sessions_spawn` `tool_result`, show `childSessionKey` as clickable badge — clicking switches to that session in the sidebar
+- For `sessions_yield` `tool_result`, hide entirely (no useful information)
 
 ### For debugging:
 - Show all types (run_end is shown in the `all` filter)
@@ -649,6 +653,125 @@ Update a structured work plan (used in planning mode).
 
 ---
 
+### `image_generate`
+
+Create or edit images. Async tool — returns immediately with task ID, completion arrives via system event.
+
+```json
+{
+  "action": "generate",
+  "prompt": "Cinematic film still, 16:9 aspect ratio...",
+  "size": "1792x1024",
+  "outputFormat": "png",
+  "filename": "cover"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | no | `"generate"` (default), `"status"` (check active task), `"list"` (enumerate providers) |
+| `prompt` | string | yes* | Image generation prompt (*required for generate) |
+| `image` | string | no | Single reference image path/URL (for edits) |
+| `images` | array | no | Reference images (max 10) |
+| `model` | string | no | Provider/model override |
+| `filename` | string | no | Output filename hint |
+| `size` | string | no | e.g. `"1024x1024"`, `"1792x1024"` |
+| `aspectRatio` | string | no | e.g. `"16:9"`, `"1:1"` |
+| `resolution` | string | no | `"1K"`, `"2K"`, `"4K"` |
+| `quality` | string | no | `"low"`, `"medium"`, `"high"`, `"auto"` |
+| `outputFormat` | string | no | `"png"`, `"jpeg"`, `"webp"` |
+| `background` | string | no | `"transparent"`, `"opaque"`, `"auto"` |
+| `count` | number | no | 1–4 images |
+| `timeoutMs` | number | no | Provider timeout in ms |
+| `openai` | object | no | `{ background, moderation, outputCompression, user }` |
+| `fal` | object | no | `{ creativity: "raw"\|"low"\|"medium"\|"high" }` |
+
+**Result shapes:**
+- **generate (started):** `{ async: true, status: "started", taskId: "...", size, outputFormat }`
+- **list:** `{ providers: [{ id, label, models, modes, configured }] }`
+- **status:** `{ active: true, status: "running", provider, progressSummary }`
+
+---
+
+### `video_generate`
+
+Create videos. Async, same pattern as `image_generate`.
+
+```json
+{
+  "prompt": "A drone flyover of a futuristic city...",
+  "durationSeconds": 5,
+  "size": "1280x720"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | no | `"generate"` (default), `"status"`, `"list"` |
+| `prompt` | string | yes* | Video prompt |
+| `image` / `images` | string/array | no | Reference images |
+| `video` / `videos` | string/array | no | Reference videos |
+| `model` | string | no | Provider/model override |
+| `filename` | string | no | Output filename hint |
+| `size` | string | no | e.g. `"1280x720"`, `"1920x1080"` |
+| `aspectRatio` | string | no | e.g. `"16:9"` |
+| `resolution` | string | no | `"360P"`–`"1080P"`, `"4K"` |
+| `durationSeconds` | number | no | Target seconds |
+| `audio` | boolean | no | Generated audio toggle |
+| `watermark` | boolean | no | Watermark toggle |
+| `timeoutMs` | number | no | Provider timeout in ms |
+| `providerOptions` | object | no | Provider-specific JSON options |
+
+---
+
+### `music_generate`
+
+Create audio/music. Async, same pattern.
+
+```json
+{
+  "prompt": "Upbeat electronic track with synth bass...",
+  "lyrics": "We are the future...",
+  "instrumental": false
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | no | `"generate"` (default), `"status"`, `"list"` |
+| `prompt` | string | no | Music style/genre prompt |
+| `lyrics` | string | no | Exact sung lyrics |
+| `instrumental` | boolean | no | Instrumental-only toggle |
+| `image` / `images` | string/array | no | Reference images |
+| `model` | string | no | Provider/model override |
+| `durationSeconds` | number | no | Target seconds |
+| `format` | string | no | `"mp3"`, `"wav"` |
+| `filename` | string | no | Output filename hint |
+
+---
+
+### `message`
+
+Send a message to a session, channel, or recipient.
+
+```json
+{
+  "message": "Here's the report you asked for",
+  "channel": "signal",
+  "to": "+1234567890"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `message` | string | yes | Message text |
+| `channel` | string | no | Delivery channel |
+| `to` | string | no | Recipient identifier |
+| `filePath` | string | no | File attachment path |
+| `sessionKey` | string | no | Target session key |
+
+---
+
 ## Tool Result Types
 
 Results vary by tool. Most results are envelopes parsed by `parseToolResult()`:
@@ -686,6 +809,10 @@ Results vary by tool. Most results are envelopes parsed by `parseToolResult()`:
 | `process` | envelope | Status, exit code, session ID |
 | `memory_search` | envelope | results[] array with path, score, excerpt |
 | `update_plan` | envelope | plan[] array with step statuses |
+| `image_generate` | envelope | Async: status, taskId, provider, size, format. Also handles list (providers) and status (progress) |
+| `video_generate` | envelope | Async: same pattern as image_generate |
+| `music_generate` | envelope | Async: same pattern as image_generate |
+| `message` | envelope | Delivery status, channel, target |
 | *(other)* | envelope or string | Generic rendering |
 
 **Error results** start with `"Error:"` or have `isError: true` in the envelope — the UI flags these red.

@@ -178,6 +178,15 @@ const messageSignatures = new Map(); // sk -> Set of signatures
 
 // One-shot file serving: token → { path, timeoutHandle }
 const fileShareTokens = new Map();
+// ── Media token store (reusable, for virtual tool results) ────────────────
+// Token → { path, mimeType }. Registered on media generation completion
+// and re-registered from persisted virtual events on server restart.
+const mediaTokens = new Map();
+const completedMediaTaskIds = new Set(); // taskId → true (runtime dedup)
+// Track toolCallIds of completion delivery message calls so we can
+// filter both the tool_start and tool_result from display.
+const completionDeliveryCallIds = new Set();
+
 const FILE_SHARE_TTL_MS = 60_000; // 60s expiry for unclaimed links
 const FILE_SHARE_ALLOWED_PREFIXES = [
   os.homedir(),
@@ -217,6 +226,11 @@ function detectFileType(filePath) {
   if (basename === 'makefile' || basename === 'gemfile') return { kind: 'code', mode: 'null' };
   if (ext === 'md' || ext === 'markdown') return { kind: 'markdown', mode: null };
   if (CM_MODES[ext]) return { kind: 'code', mode: CM_MODES[ext] };
+  // Image types
+  const IMG_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml',
+    bmp: 'image/bmp', ico: 'image/x-icon' };
+  if (IMG_MIME[ext]) return { kind: 'image', mime: IMG_MIME[ext] };
   // Try to detect if it's text - read first 1KB and check for null bytes
   try {
     const fd = fs.openSync(filePath, 'r');
@@ -316,7 +330,19 @@ body{background:#1e1e2e;color:#cdd6f4;font-family:'SF Mono','Fira Code',monospac
 #md-view ul,#md-view ol{padding-left:24px;margin:8px 0}
 #plain-view{padding:16px 20px;white-space:pre-wrap;font-family:inherit;line-height:1.6;overflow:auto;position:absolute;inset:0}
 #binary-msg{display:flex;align-items:center;justify-content:center;height:100%;color:#a6adc8;font-size:14px;flex-direction:column;gap:12px}
+#img-view{display:flex;align-items:center;justify-content:center;height:100%;padding:16px}
+#img-view img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,0.4)}
 </style>`;
+
+  // Image files - render inline
+  if (type.kind === 'image') {
+    const dataUri = `data:${type.mime};base64,${content}`;
+    return headerHtml + `</head><body>
+<div id="bar"><span class="name">🖼️ ${encodedTitle}</span><span class="spacer"></span><span style="font-size:10px;color:#585b70">${htmlEncode(type.mime || 'image')}</span><button class="dl" onclick="downloadFile()">⬇ Download</button><button class="close" onclick="window.close()">✕</button></div>
+<div id="main"><div id="img-view"><img src="${dataUri}" alt="${encodedTitle}" /></div></div>
+<script>function downloadFile(){var a=document.createElement('a');a.href='${dataUri}';a.download=${JSON.stringify(title)};document.body.appendChild(a);a.click();document.body.removeChild(a)}</` + `script>
+</body></html>`;
+  }
 
   // Binary files - can't preview
   if (type.kind === 'binary') {
@@ -589,6 +615,264 @@ function convertToFrontendEvent(rawMsg) {
   return null;
 }
 
+// ── Media path extraction (format-agnostic) ───────────────────────────────
+// Message tool input formats are not under our control. This helper tries
+// every known structure to find a file path. Add new strategies here as
+// delivery formats evolve — never delete old ones.
+function extractMediaPath(input) {
+  if (!input || typeof input !== 'object') return '';
+
+  // Strategy 1: direct filePath (old flat format)
+  if (typeof input.filePath === 'string' && input.filePath) return input.filePath;
+
+  // Strategy 2: attachments array (rich format)
+  if (Array.isArray(input.attachments)) {
+    for (const att of input.attachments) {
+      if (att && typeof att.path === 'string' && att.path) return att.path;
+    }
+  }
+
+  // Strategy 3: single attachment object
+  if (input.attachment && typeof input.attachment.path === 'string' && input.attachment.path)
+    return input.attachment.path;
+
+  // Strategy 4: deep search (recursive, limited depth) — catch-all for
+  // unknown future formats that nest a "path" field somewhere
+  const search = (obj, depth) => {
+    if (!obj || typeof obj !== 'object' || depth > 3) return '';
+    for (const key of Object.keys(obj)) {
+      const v = obj[key];
+      if (key === 'path' && typeof v === 'string' && v) return v;
+      if (typeof v === 'object' && !Array.isArray(v)) {
+        const found = search(v, depth + 1);
+        if (found) return found;
+      }
+      if (Array.isArray(v)) {
+        for (const item of v) {
+          if (item && typeof item === 'object') {
+            const found = search(item, depth + 1);
+            if (found) return found;
+          }
+        }
+      }
+    }
+    return '';
+  };
+  return search(input, 1);
+}
+
+// ── Async Media Completion Detection ──────────────────────────────────────
+// When image_generate / video_generate / music_generate completes
+// asynchronously, the agent receives a new run with runId pattern
+// "<tool>_generate:<taskId>:ok" (or :error). Two delivery patterns exist:
+//
+// Pattern A (message tool): newer — tool_start for "message" carries
+//   filePath in input → extract directly. Most common path.
+// Pattern B (exec cp): older — exec cp"SRC" "DST" → parse command.
+//
+// This function detects either pattern, pairs back to the original generate
+// call, and injects a virtual tool_result with the completed media.
+function tryDetectMediaCompletion(ev, session) {
+  let match, mediaType, taskId, status;
+  let mediaPath = '', mediaFilename = '', caption = '';
+
+  // ── Pattern A: message tool_start with filePath ─────────────────────
+  if (ev.type === 'tool_start' && ev.toolName === 'message') {
+    match = (ev.runId || '').match(
+      /^(image_generate|video_generate|music_generate):([^:]+):(ok|error)$/
+    );
+    if (!match) return;
+    [, mediaType, taskId, status] = match;
+
+    // Extract filePath and message (LLM caption) from message input.
+    // Uses format-agnostic helper: tries filePath, attachments[],
+    // and deep-search as fallback for unknown future formats.
+    const inp = typeof ev.input === 'string'
+      ? (() => { try { return JSON.parse(ev.input); } catch { return {}; } })()
+      : (ev.input || {});
+    mediaPath = extractMediaPath(inp);
+    if (mediaPath) mediaFilename = path.basename(mediaPath);
+    caption = inp.message || '';
+  }
+  // ── Pattern B: exec tool_result after cp command ──────────────────
+  else if (ev.type === 'tool_result' && ev.toolName === 'exec') {
+    // Find matching exec tool_start (the cp command) — always recent
+    let execStart = null;
+    for (let i = session.events.length - 1; i >= 0 && i >= session.events.length - 50; i--) {
+      if (session.events[i].type === 'tool_start' &&
+          session.events[i].toolName === 'exec' &&
+          session.events[i].toolCallId === ev.toolCallId) {
+        execStart = session.events[i];
+        break;
+      }
+    }
+    if (!execStart) return;
+
+    match = (execStart.runId || '').match(
+      /^(image_generate|video_generate|music_generate):([^:]+):(ok|error)$/
+    );
+    if (!match) return;
+    [, mediaType, taskId, status] = match;
+
+    // Guard: only proceed if exec_start is actually a cp command.
+    // Non-cp exec events (grep, read, etc.) happen in completion runs
+    // but are NOT the file delivery — skip them to avoid bogus
+    // virtual results with empty paths.
+    const cmd = typeof execStart.input === 'string'
+      ? execStart.input
+      : (execStart.input?.command || '');
+    const cpMatch = cmd.match(/cp\s+"([^"]+)"\s+"([^"]+)"/);
+    if (!cpMatch) return;
+
+    if (status === 'ok') {
+      const srcPath = cpMatch[1];
+      const dstPath = cpMatch[2];
+      if (fs.existsSync(dstPath)) {
+        mediaPath = dstPath;
+      } else if (fs.existsSync(srcPath)) {
+        mediaPath = srcPath;
+      }
+      mediaFilename = path.basename(mediaPath);
+    }
+  } else {
+    return;
+  }
+
+  // ── Common pipeline (same for both patterns) ─────────────────────────────
+
+  // Idempotency — runtime
+  if (completedMediaTaskIds.has(taskId)) return;
+  completedMediaTaskIds.add(taskId);
+
+  // Idempotency — persistent (already on disk after restart)
+  for (let i = session.events.length - 1; i >= 0; i--) {
+    const ve = session.events[i];
+    if (ve.isVirtual && ve.toolName === mediaType) {
+      try {
+        const p = JSON.parse(ve.result);
+        if (p?.details?.taskId === taskId) return;
+      } catch {}
+    }
+  }
+
+  // Find original generate tool_result (by taskId, last 300 events)
+  let origResult = null;
+  for (let i = session.events.length - 1; i >= 0 && i >= session.events.length - 300; i--) {
+    const se = session.events[i];
+    if (se.type === 'tool_result' && se.toolName === mediaType) {
+      try {
+        const p = JSON.parse(se.result);
+        if (p?.details?.taskId === taskId) {
+          origResult = se;
+          break;
+        }
+      } catch {}
+    }
+  }
+  if (!origResult) return;
+
+  // Find original generate tool_start (same toolCallId)
+  let origStart = null;
+  for (let i = session.events.length - 1; i >= 0 && i >= session.events.length - 300; i--) {
+    if (session.events[i].type === 'tool_start' &&
+        session.events[i].toolName === mediaType &&
+        session.events[i].toolCallId === origResult.toolCallId) {
+      origStart = session.events[i];
+      break;
+    }
+  }
+  if (!origStart) return;
+
+  // Validate media path exists (for ok status)
+  if (status === 'ok' && mediaPath && !fs.existsSync(mediaPath)) {
+    // File not found — try common container path as fallback
+    const containerPath = path.join(
+      os.homedir(), '.openclaw', 'media', 'tool-image-generation',
+      path.basename(mediaPath)
+    );
+    if (fs.existsSync(containerPath)) {
+      mediaPath = containerPath;
+      mediaFilename = path.basename(mediaPath);
+    } else {
+      mediaPath = '';
+      mediaFilename = '';
+    }
+  }
+
+  // Create media token
+  let mediaToken = '';
+  if (mediaPath && fs.existsSync(mediaPath)) {
+    mediaToken = crypto.randomUUID();
+    const ext = path.extname(mediaPath).toLowerCase();
+    const MIME_MAP = {
+      '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+      '.bmp': 'image/bmp',
+      '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
+      '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
+      '.flac': 'audio/flac', '.aac': 'audio/aac', '.m4a': 'audio/mp4'
+    };
+    const now = Date.now();
+    mediaTokens.set(mediaToken, {
+      path: mediaPath,
+      mimeType: MIME_MAP[ext] || 'application/octet-stream',
+      createdAt: now,
+      lastAccessed: now
+    });
+    // LRU eviction: keep at most 100 entries, evict oldest by creation time
+    if (mediaTokens.size > 100) {
+      let oldest = null;
+      for (const [k, v] of mediaTokens) {
+        if (!oldest || v.createdAt < oldest.createdAt) oldest = { key: k, createdAt: v.createdAt };
+      }
+      if (oldest) mediaTokens.delete(oldest.key);
+    }
+  }
+
+  // Extract original prompt/size/format from tool_start input
+  let origPrompt = '', origSize = '', origFormat = '';
+  try {
+    const inp = typeof origStart.input === 'string'
+      ? JSON.parse(origStart.input) : origStart.input;
+    if (inp) {
+      origPrompt = inp.prompt || '';
+      origSize = inp.size || '';
+      origFormat = inp.outputFormat || '';
+    }
+  } catch {}
+
+  // Build virtual tool_result
+  const details = {
+    status: status === 'ok' ? 'completed' : 'failed',
+    async: true,
+    taskId,
+    prompt: origPrompt,
+    size: origSize,
+    outputFormat: origFormat
+  };
+  if (mediaToken) details.mediaToken = mediaToken;
+  if (mediaPath) details.mediaPath = mediaPath;
+  if (mediaFilename) details.filename = mediaFilename;
+  if (caption) details.caption = caption;
+
+  const virtualResult = {
+    type: 'tool_result',
+    runId: origStart.runId,
+    toolName: mediaType,
+    toolCallId: origResult.toolCallId,
+    result: JSON.stringify({
+      content: [{ type: 'text', text: status === 'ok' ? `${mediaType} completed → ${mediaFilename || 'file'}` : `${mediaType} failed` }],
+      details
+    }),
+    isError: status !== 'ok',
+    isVirtual: true,
+    ts: new Date()
+  };
+
+  session.addEvent(virtualResult);
+  log('info', `Virtual ${mediaType} result injected: taskId=${taskId}, status=${status}, path=${mediaPath || 'none'}`);
+}
+
 class SessionState {
   constructor(key, loadedFromDisk = false) {
     this.key = key;
@@ -617,12 +901,15 @@ class SessionState {
   }
 
   _makeEventKey(ev) {
-    // Build a dedup key from event type + runId + content
+    // Build a dedup key from event type + runId + content.
+    // Includes result hash so virtual completion events (same toolCallId but
+    // different result content) are NOT deduped against the original "started" result.
     const parts = [ev.type || '', ev.runId || ''];
     if (ev.text) parts.push(hashString(ev.text));
     if (ev.toolName) parts.push(ev.toolName);
     if (ev.toolCallId) parts.push(ev.toolCallId);
     if (ev.input) parts.push(hashString(typeof ev.input === 'string' ? ev.input : JSON.stringify(ev.input)));
+    if (ev.result) parts.push(hashString(typeof ev.result === 'string' ? ev.result : JSON.stringify(ev.result)));
     return parts.join('|');
   }
 
@@ -709,6 +996,47 @@ class SessionState {
         this._seenEventKeys = new Set();
         for (const ev of this.events) {
           this._seenEventKeys.add(this._makeEventKey(ev));
+        }
+        // Re-register media tokens from persisted virtual tool_result events
+        // so completed images/video/audio survive server restarts.
+        const mediaDir = path.join(os.homedir(), '.openclaw', 'media');
+        for (const ev of this.events) {
+          if (ev.isVirtual && ev.toolName &&
+              /^(image_generate|video_generate|music_generate)$/.test(ev.toolName)) {
+            try {
+              const parsed = JSON.parse(ev.result);
+              const d = parsed?.details;
+              if (d?.mediaToken && d?.mediaPath) {
+                const resolved = path.resolve(d.mediaPath);
+                if (fs.existsSync(resolved) && resolved.startsWith(mediaDir)) {
+                  const ext = path.extname(resolved).toLowerCase();
+                  const MIME_MAP = {
+                    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+                    '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+                    '.bmp': 'image/bmp',
+                    '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
+                    '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
+                    '.flac': 'audio/flac', '.aac': 'audio/aac', '.m4a': 'audio/mp4'
+                  };
+                  const now = Date.now();
+                  mediaTokens.set(d.mediaToken, {
+                    path: resolved,
+                    mimeType: MIME_MAP[ext] || 'application/octet-stream',
+                    createdAt: now,
+                    lastAccessed: now
+                  });
+                  // LRU eviction
+                  if (mediaTokens.size > 100) {
+                    let oldest = null;
+                    for (const [k, v] of mediaTokens) {
+                      if (!oldest || v.createdAt < oldest.createdAt) oldest = { key: k, createdAt: v.createdAt };
+                    }
+                    if (oldest) mediaTokens.delete(oldest.key);
+                  }
+                }
+              }
+            } catch {}
+          }
         }
         // Reset message broadcast pointer so we don't re-send historical messages
         this._lastMsgBroadcastCount = this.messages.length;
@@ -1013,10 +1341,17 @@ function handleRequest(req, res) {
   const sessionMatch = parsedUrl.pathname.match(/^\/api\/session\/(.+)$/);
   if (sessionMatch) {
     const sk = decodeURIComponent(sessionMatch[1]);
+    const limit = parseInt(parsedUrl.query.limit) || 0; // 0 = no limit (all)
     const sess = sessions.get(sk);
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
     if (sess) {
-      res.end(JSON.stringify(sess.toClientFormat()));
+      const fmt = sess.toClientFormat();
+      if (limit > 0 && fmt.events.length > limit) {
+        fmt.events = fmt.events.slice(-limit);
+        fmt.truncated = true;
+        fmt.totalEventCount = sess.events.length;
+      }
+      res.end(JSON.stringify(fmt));
     } else {
       res.end(JSON.stringify({ key: sk, events: [], messages: [], tokens: {}, error: 'not found' }));
     }
@@ -1036,6 +1371,68 @@ function handleRequest(req, res) {
       res.end(JSON.stringify({ sessionKey: sk, events: [], total: 0 }));
     }
     return;
+  }
+
+  // ── Reusable media serving (virtual tool results) ─────────────────────
+  // GET /api/media/serve/:token — serves media files from async generation
+  // completions. Non-consumable (unlike file sharing). Tokens survive page
+  // reloads and server restarts (re-registered in SessionState.load()).
+  {
+    const mediaServeMatch = parsedUrl.pathname.match(/^\/api\/media\/serve\/([^/]+)$/);
+    if (mediaServeMatch) {
+      const token = mediaServeMatch[1];
+      const entry = mediaTokens.get(token);
+
+      if (!entry) {
+        res.writeHead(410, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+        res.end('Media token expired or invalid');
+        return;
+      }
+
+      // TTL expiry: 7 days since creation or 24h since last access
+      const now = Date.now();
+      const CREATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+      const IDLE_TTL_MS = 24 * 60 * 60 * 1000;
+      const age = now - (entry.createdAt || 0);
+      const idle = now - (entry.lastAccessed || 0);
+      if (age > CREATION_TTL_MS || idle > IDLE_TTL_MS) {
+        mediaTokens.delete(token);
+        res.writeHead(410, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+        res.end('Media token expired');
+        return;
+      }
+      entry.lastAccessed = now;
+
+      // Security check: path must be under ~/.openclaw/media/
+      const mediaDir = path.join(os.homedir(), '.openclaw', 'media');
+      const resolved = path.resolve(entry.path);
+      if (!resolved.startsWith(mediaDir)) {
+        res.writeHead(403, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+        res.end('Access denied');
+        return;
+      }
+
+      if (!fs.existsSync(resolved)) {
+        res.writeHead(404, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+        res.end('File not found');
+        return;
+      }
+
+      res.writeHead(200, {
+        'Content-Type': entry.mimeType || 'application/octet-stream',
+        'Cache-Control': 'public, max-age=3600',
+        'Access-Control-Allow-Origin': '*'
+      });
+      const readStream = fs.createReadStream(resolved);
+      readStream.pipe(res);
+      readStream.on('error', () => {
+        if (!res.headersSent) {
+          res.writeHead(500);
+          res.end('Error reading file');
+        }
+      });
+      return;
+    }
   }
 
   // One-shot file sharing: generate a single-use download link
@@ -1197,9 +1594,19 @@ function handleRequest(req, res) {
       return;
     }
 
+    // Detect file type to decide how to read
+    const fileType = detectFileType(entry.path);
+    const isImage = fileType.kind === 'image';
+
     let content;
     try {
-      content = fs.readFileSync(entry.path, 'utf8');
+      if (isImage) {
+        // Read images as base64 for data URI embedding (includes SVG)
+        const buf = fs.readFileSync(entry.path);
+        content = buf.toString('base64');
+      } else {
+        content = fs.readFileSync(entry.path, 'utf8');
+      }
     } catch (readErr) {
       res.writeHead(500, { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' });
       res.end('<!DOCTYPE html><body style="background:#1e1e2e;color:#cdd6f4;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh"><h2>Read Error</h2><p style="color:#a6adc8">' + readErr.message + '</p></body>');
@@ -1277,11 +1684,21 @@ wss.on('connection', (ws, req) => {
   }));
 
   sessions.forEach((sess, sk) => {
-    log('info', `Syncing session ${sk} to client ${clientId}: ${sess.events.length} events, ${sess.messages.length} messages`);
+    const allEvents = sess.events;
+    const SYNC_EVENT_LIMIT = 100;
+    const truncated = allEvents.length > SYNC_EVENT_LIMIT;
+    const syncEvents = truncated ? allEvents.slice(-SYNC_EVENT_LIMIT) : allEvents;
+    log('info', `Syncing session ${sk} to client ${clientId}: ${syncEvents.length} events (of ${allEvents.length}), ${sess.messages.length} messages`);
     ws.send(JSON.stringify({
       type: 'event',
       event: 'session.sync',
-      payload: sess.toClientFormat()
+      payload: {
+        ...sess.toClientFormat(),
+        sessionKey: sk,
+        events: syncEvents,
+        truncated,
+        totalEventCount: allEvents.length
+      }
     }));
   });
 
@@ -1729,7 +2146,46 @@ function handleGatewayMessage(msg) {
         events.forEach(ev => {
           ev.sessionKey = sk;
           ev.ts = Date.now();
-          session.addEvent(ev);
+
+          // ── Detect async media completion BEFORE persisting ─────────
+          // Pattern A (message tool_start) must run before addEvent so
+          // caption extraction works, THEN we can filter the event.
+          // Pattern B (exec tool_result) runs AFTER addEvent — it needs
+          // to search backwards through session.events for the exec start.
+          let skip = false;
+
+          if (ev.type === 'tool_start' && ev.toolName === 'message') {
+            // Pattern A: message tool_start with runId like image_generate:<taskId>:ok
+            const runMatch = (ev.runId || '').match(
+              /^(image_generate|video_generate|music_generate):[^:]+:(ok|error)$/
+            );
+            if (runMatch) {
+              // Extract caption + filePath first via detection
+              tryDetectMediaCompletion(ev, session);
+              // Then filter the delivery plumbing event from display
+              skip = true;
+              completionDeliveryCallIds.add(ev.toolCallId);
+            }
+          }
+
+          if (ev.type === 'tool_result' && ev.toolName === 'message') {
+            // Filter tool_result if its tool_start was a completion delivery
+            if (completionDeliveryCallIds.has(ev.toolCallId)) {
+              completionDeliveryCallIds.delete(ev.toolCallId);
+              skip = true;
+            }
+          }
+
+          if (!skip) {
+            session.addEvent(ev);
+          }
+
+          // Pattern B (exec tool_result) — runs AFTER addEvent, searches
+          // backwards in event list for matching exec tool_start.
+          // exec events are NOT filtered — they represent real tool calls.
+          if (ev.type === 'tool_result' && ev.toolName === 'exec') {
+            tryDetectMediaCompletion(ev, session);
+          }
 
           // Also update SessionState tokens when run_start includes token data
           if (ev.type === 'run_start' && ev.totalTokens) {
