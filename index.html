@@ -1851,10 +1851,28 @@ function renderEventSafe(ev, idx, forceExpand) {
 function showSessionContent(sess) {
   const displayTotal = sess.totalTokens || 0;
   const titleEl = document.getElementById('content-title');
-  const shortSk = sess.key && sess.key.length > 60 ? sess.key.slice(0, 57) + '...' : (sess.key || 'unknown');
   const modelBadge = sess.model ? '<span style="background:var(--accent);color:#000;padding:2px 10px;border-radius:4px;font-weight:600;margin-left:12px;">' + escHtml(sess.model) + '</span>' : '';
 
-  titleEl.innerHTML = escHtml(shortSk) +
+  // Build styled session key with agent name in its accent color + bolder
+  const fullKey = sess.key || 'unknown';
+  const agentName = getAgentName(fullKey);
+  var styledKey;
+  if (agentName) {
+    const theme = getOrCreateAgentTheme(agentName);
+    const agentColor = 'hsl(' + theme.hue + ', 84%, 65%)';
+    // Split on ':' and style the agent-name segment
+    const parts = fullKey.split(':');
+    const styledParts = parts.map(function(p) {
+      if (p === agentName) return '<span style="color:' + agentColor + ';font-weight:800;">' + escHtml(p) + '</span>';
+      return escHtml(p);
+    });
+    styledKey = styledParts.join(':');
+  } else {
+    styledKey = escHtml(fullKey);
+  }
+  const shortSk = styledKey.length > 80 ? styledKey.slice(0, 77) + '&hellip;' : styledKey;
+
+  titleEl.innerHTML = shortSk +
     '<span style="font-weight:700;font-size:13px;margin-left:12px;background:var(--accent);color:#000;padding:2px 10px;border-radius:4px;">' + displayTotal.toLocaleString() + '</span>' +
     modelBadge;
 
@@ -2449,12 +2467,14 @@ function renderExecHeader(ev, parsed, t, idx, expanded) {
   }
   const bodyHtml = '<div class="tr-body">' + bodyContent + '</div>';
 
+  const copyCmdBtn = cmd ? '<span class="tc-copy-path" data-copy="' + escAttr(cmd) + '" onclick="event.stopPropagation();copyFromAttr(this)" title="Copy command">📋</span>' : '';
   const stderrClass = ((hasExitCode && !exitOk) || ev.isError) ? ' tr-stderr' : '';
   return '<div class="tr-wrap' + errorClass + expandClass + stderrClass + '" data-idx="' + idx + '">' +
     '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
       '<span class="tr-tag tr-tag-tool">↳ exec</span>' +
       exitTag +
       (detail.length ? '<span class="tr-detail">' + detail.join(' · ') + '</span>' : '') +
+      copyCmdBtn +
       (ev.isError ? '<span style="color:var(--error);font-weight:700;font-size:10px;">✖</span>' : '') +
       (hasExitCode && !exitOk && !ev.isError ? '<span style="color:var(--error);font-weight:700;font-size:10px;">⚠ stderr</span>' : '') +
       '<span class="tr-time">' + t + '</span>' +
@@ -2479,6 +2499,7 @@ function renderReadHeader(ev, parsed, t, idx, expanded) {
   const fpClickable = filePath
     ? '<span class="tr-detail" style="cursor:pointer;color:var(--info);text-decoration:underline;text-underline-offset:2px;" onclick="event.stopPropagation();viewFile(\'' + escAttr(filePath) + '\')" title="Click to view: ' + escAttr(filePath) + '">📄 ' + fp + '</span>'
     : '';
+  const copyPathBtn = filePath ? '<span class="tc-copy-path" data-copy="' + escAttr(filePath) + '" onclick="event.stopPropagation();copyFromAttr(this)" title="Copy path">📋</span>' : '';
   let bodyHtml = '';
   if (parsed.text) {
     bodyHtml += renderUdiffContent(parsed.text, filePath, idx);
@@ -2487,6 +2508,7 @@ function renderReadHeader(ev, parsed, t, idx, expanded) {
     '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
       '<span class="tr-tag tr-tag-tool">↳ read</span>' +
       fpClickable +
+      copyPathBtn +
       lines +
       '<span class="tr-time">' + t + '</span>' +
     '</div>' +
@@ -2514,6 +2536,7 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
   const fpClickable = filePath
     ? '<span class="tr-detail" style="cursor:pointer;color:var(--info);text-decoration:underline;text-underline-offset:2px;" onclick="event.stopPropagation();viewFile(\'' + escAttr(filePath) + '\')" title="Click to view: ' + escAttr(filePath) + '">📄 ' + fpShort + '</span>'
     : '';
+  const copyPathBtn = filePath ? '<span class="tc-copy-path" data-copy="' + escAttr(filePath) + '" onclick="event.stopPropagation();copyFromAttr(this)" title="Copy path">📋</span>' : '';
 
   const rawDetail = isError ? (errorText || parsed.text || 'Edit failed') : (parsed.text || 'edit');
   const headerDetail = escHtml(rawDetail.length > 120 ? rawDetail.slice(0, 117) + '...' : rawDetail);
@@ -2554,6 +2577,7 @@ function renderEditHeader(ev, parsed, t, idx, expanded) {
       '<span class="tr-tag tr-tag-tool">↳ edit</span>' +
       (isError ? '<span class="tr-tag err">ERROR</span>' : '<span class="tr-tag ok">OK</span>') +
       (filePath ? fpClickable : '') +
+      copyPathBtn +
       '<span class="tr-detail" style="' + (isError ? 'color:var(--error);' : '') + '">' + headerDetail + '</span>' +
       '<span class="tr-time">' + t + '</span>' +
     '</div>' +
@@ -2587,6 +2611,7 @@ function renderWriteHeader(ev, parsed, t, idx, expanded) {
   const fpClickable = filePath
     ? '<span class="tr-detail" style="cursor:pointer;color:var(--info);text-decoration:underline;text-underline-offset:2px;" onclick="event.stopPropagation();viewFile(\'' + escAttr(filePath) + '\')" title="Click to view: ' + escAttr(filePath) + '">📄 ' + fpShort + '</span>'
     : '';
+  const copyPathBtn = filePath ? '<span class="tc-copy-path" data-copy="' + escAttr(filePath) + '" onclick="event.stopPropagation();copyFromAttr(this)" title="Copy path">📋</span>' : '';
   // Content stats for header
   const contentLines = content ? content.split('\n').length : 0;
   const sizeLabel = content ? formatContentSize(content) : '';
@@ -2602,6 +2627,7 @@ function renderWriteHeader(ev, parsed, t, idx, expanded) {
       '<span class="tr-tag tr-tag-tool">↳ write</span>' +
       '<span class="tr-tag ok">✅</span>' +
       (filePath ? fpClickable : '<span class="tr-detail">' + escHtml(text) + '</span>') +
+      copyPathBtn +
       (statsDetail.length ? '<span class="tr-detail">' + statsDetail.join(' · ') + '</span>' : '') +
       '<span class="tr-time">' + t + '</span>' +
     '</div>' +
@@ -2793,23 +2819,25 @@ function renderImageGenResult(ev, parsed, t, idx, expanded) {
         'loading="lazy" ' +
         'onclick="window.open(\'/api/media/serve/' + escAttr(d.mediaToken) + '\', \'_blank\')" ' +
         'title="Click to view full size" />' +
-      (d.filename ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;">' + escHtml(d.filename) + '</div>' : '') +
       '</div>';
   }
 
   if (d.status === 'failed') {
     bodyContent += '<div style="color:var(--error);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' +
       escHtml(parsed.text || 'Image generation failed') + '</div>';
-  } else if (parsed.text) {
-    bodyContent += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
   }
-  bodyContent += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+
+  var copyPathBtn = '';
+  if (d.status === 'completed' && d.mediaPath) {
+    copyPathBtn = '<span class="tc-copy-path" data-copy="' + escAttr(d.mediaPath) + '" onclick="event.stopPropagation();copyFromAttr(this)" title="Copy file path">📋</span>';
+  }
 
   return '<div class="tr-wrap' + expandClass + errorClass + '" data-idx="' + idx + '">' +
     '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
       '<span class="tr-tag tr-tag-tool">🖼️ image_gen</span>' +
-      '<span class="tr-tag" style="background:var(--info);color:#000;">' + statusIcon + ' ' + escHtml(statusLabel) + '</span>' +
+      '<span class="tr-tag" style="background:var(--info);color:#000;cursor:pointer;" onclick="event.stopPropagation();showJsonViewer(' + idx + ')" title="Click to view JSON">' + statusIcon + ' ' + escHtml(statusLabel) + '</span>' +
       (detailHtml ? '<span style="color:var(--muted);font-size:10px;">' + detailHtml + '</span>' : '') +
+      copyPathBtn +
       '<span class="tr-time">' + t + '</span>' +
     '</div>' +
     '<div class="tr-body">' + bodyContent + '</div>' +
@@ -2931,7 +2959,6 @@ function renderVideoGenResult(ev, parsed, t, idx, expanded) {
         '<video controls style="max-width:100%;max-height:400px;border-radius:6px;" ' +
           'src="/api/media/serve/' + escAttr(d.mediaToken) + '" ' +
           'title="' + escAttr(d.prompt || 'Generated video') + '"></video>' +
-        (d.filename ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;">' + escHtml(d.filename) + '</div>' : '') +
         '</div>';
     } else {
       // Audio or unknown — show download link
@@ -2946,16 +2973,19 @@ function renderVideoGenResult(ev, parsed, t, idx, expanded) {
   if (d.status === 'failed') {
     bodyContent += '<div style="color:var(--error);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' +
       escHtml(parsed.text || 'Video generation failed') + '</div>';
-  } else if (parsed.text) {
-    bodyContent += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
   }
-  bodyContent += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+
+  var copyPathBtn2 = '';
+  if (d.status === 'completed' && d.mediaPath) {
+    copyPathBtn2 = '<span class="tc-copy-path" data-copy="' + escAttr(d.mediaPath) + '" onclick="event.stopPropagation();copyFromAttr(this)" title="Copy file path">📋</span>';
+  }
 
   return '<div class="tr-wrap' + expandClass + errorClass + '" data-idx="' + idx + '">' +
     '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
       '<span class="tr-tag tr-tag-tool">🎬 video_gen</span>' +
-      '<span class="tr-tag" style="background:var(--info);color:#000;">' + statusIcon + ' ' + escHtml(statusLabel) + '</span>' +
+      '<span class="tr-tag" style="background:var(--info);color:#000;cursor:pointer;" onclick="event.stopPropagation();showJsonViewer(' + idx + ')" title="Click to view JSON">' + statusIcon + ' ' + escHtml(statusLabel) + '</span>' +
       (detailHtml ? '<span style="color:var(--muted);font-size:10px;">' + detailHtml + '</span>' : '') +
+      copyPathBtn2 +
       '<span class="tr-time">' + t + '</span>' +
     '</div>' +
     '<div class="tr-body">' + bodyContent + '</div>' +
@@ -3050,16 +3080,19 @@ function renderMusicGenResult(ev, parsed, t, idx, expanded) {
   if (d.status === 'failed') {
     bodyContent += '<div style="color:var(--error);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' +
       escHtml(parsed.text || 'Music generation failed') + '</div>';
-  } else if (parsed.text) {
-    bodyContent += '<div style="color:var(--muted);font-size:11px;padding:8px;background:#1a1b26;border-radius:4px;margin-top:4px;">' + escHtml(parsed.text) + '</div>';
   }
-  bodyContent += '<div class="tr-actions">' + trActionsHtml(idx) + '</div>';
+
+  var copyPathBtn3 = '';
+  if (d.status === 'completed' && d.mediaPath) {
+    copyPathBtn3 = '<span class="tc-copy-path" data-copy="' + escAttr(d.mediaPath) + '" onclick="event.stopPropagation();copyFromAttr(this)" title="Copy file path">📋</span>';
+  }
 
   return '<div class="tr-wrap' + expandClass + errorClass + '" data-idx="' + idx + '">' +
     '<div class="tr-header" onclick="toggleToolResult(this.parentElement,' + idx + ')">' +
       '<span class="tr-tag tr-tag-tool">🎵 music_gen</span>' +
-      '<span class="tr-tag" style="background:var(--info);color:#000;">' + statusIcon + ' ' + escHtml(statusLabel) + '</span>' +
+      '<span class="tr-tag" style="background:var(--info);color:#000;cursor:pointer;" onclick="event.stopPropagation();showJsonViewer(' + idx + ')" title="Click to view JSON">' + statusIcon + ' ' + escHtml(statusLabel) + '</span>' +
       (detailHtml ? '<span style="color:var(--muted);font-size:10px;">' + detailHtml + '</span>' : '') +
+      copyPathBtn3 +
       '<span class="tr-time">' + t + '</span>' +
     '</div>' +
     '<div class="tr-body">' + bodyContent + '</div>' +
