@@ -41,10 +41,10 @@ Both paths fire for every `session.tool` gateway event. The raw path creates too
 
 ### Backend (correct): stores intermediate + final as separate events
 
-`deepclaw-ui.js` L887-898 — `SessionState._makeEventKey()` includes `hashString(result)` in the dedup key. When the gateway sends both `phase: 'update'` (partial) and `phase: 'done'` (final) for the same tool call, the different result hashes produce different keys → both events stored separately in `sess.events[]`.
+`miniclaw-ui.js` L887-898 — `SessionState._makeEventKey()` includes `hashString(result)` in the dedup key. When the gateway sends both `phase: 'update'` (partial) and `phase: 'done'` (final) for the same tool call, the different result hashes produce different keys → both events stored separately in `sess.events[]`.
 
 ```javascript
-// deepclaw-ui.js L896
+// miniclaw-ui.js L896
 if (ev.result) parts.push(hashString(typeof ev.result === 'string' ? ev.result : JSON.stringify(ev.result)));
 ```
 
@@ -156,7 +156,7 @@ The key insight: a JSON envelope result (`{content: [...], details: {...}}`) is 
 
 ### Manual test
 
-1. Start deepclaw-ui: `node deepclaw-ui.js`
+1. Start miniclaw-ui: `node miniclaw-ui.js`
 2. Open dashboard, send a message that triggers an `edit` or `write` tool call
 3. Observe tool results during streaming — should show formatted diff/card, not raw JSON
 4. Switch sessions in sidebar and back — rendering should be identical
@@ -174,8 +174,8 @@ The key insight: a JSON envelope result (`{content: [...], details: {...}}`) is 
 - `docs/event-rendering.md` — `renderEditHeader`, `parseToolResult`, per-tool result renderers
 - `docs/message-processing.md` — `convertToFrontendEvent`, tool_result creation, `agent` stream handling
 - Source: `index.html` ~L1100-1116 (merge), ~L2117 (`parseToolResult`), ~L3808 (`renderToolResult`)
-- Source: `deepclaw-ui.js` L442-468 (`agent` stream), L470-510 (`session.tool` stream), L887-898 (`_makeEventKey`)
-- Source: `deepclaw-ui.js` L927-933 (`addEvent` broadcast), L1097-1100 (`broadcastToClients`)
+- Source: `miniclaw-ui.js` L442-468 (`agent` stream), L470-510 (`session.tool` stream), L887-898 (`_makeEventKey`)
+- Source: `miniclaw-ui.js` L927-933 (`addEvent` broadcast), L1097-1100 (`broadcastToClients`)
 
 ## Implementation (2026-06-02)
 

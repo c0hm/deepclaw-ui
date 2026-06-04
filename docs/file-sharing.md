@@ -2,7 +2,7 @@
 
 ## Overview
 
-DeepClaw UI includes a one-shot token-based file sharing system. It allows users to generate temporary URLs for files within allowed paths, with both download and inline viewer options.
+MiniClaw UI includes a one-shot token-based file sharing system. It allows users to generate temporary URLs for files within allowed paths, with both download and inline viewer options.
 
 ## Architecture
 

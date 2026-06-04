@@ -13,7 +13,7 @@
 
 ### A. `index.html` — Filename links in media result headers
 
-**File:** `/home/ju/deepclaw-ui/index.html`
+**File:** `/home/ju/miniclaw-ui/index.html`
 
 **Affected renderers:**
 - `renderImageGenResult` (~L2681)
@@ -39,9 +39,9 @@
 | `renderVideoGenResult` | `async` · `provider` · `size` · `durationSeconds` · **filename link** |
 | `renderMusicGenResult` | `async` · `provider` · `durationSeconds` · `format` · **filename link** |
 
-### B. `deepclaw-ui.js` — Image support in file viewer
+### B. `miniclaw-ui.js` — Image support in file viewer
 
-**File:** `/home/ju/deepclaw-ui.js`
+**File:** `/home/ju/miniclaw-ui.js`
 
 Three changes:
 
@@ -84,9 +84,9 @@ Three changes:
 | `index.html` | `renderImageGenResult` (~L2750) | Replace task ID with linked filename when `status=completed` + `mediaToken` + `filename` |
 | `index.html` | `renderVideoGenResult` (~L2890) | Same pattern — linked filename in completed header |
 | `index.html` | `renderMusicGenResult` (~L3010) | Same pattern — linked filename in completed header |
-| `deepclaw-ui.js` | `detectFileType` (~L233) | Add `IMG_MIME` map returning `{ kind:'image', mime:... }` for 8 extensions |
-| `deepclaw-ui.js` | Viewer route (~L1598) | Detect image type; read as base64 via `fs.readFileSync` without encoding |
-| `deepclaw-ui.js` | `generateViewerPage` (~L338) | Add `#img-view` branch before binary fallback; render `<img>` with data URI, Download button |
+| `miniclaw-ui.js` | `detectFileType` (~L233) | Add `IMG_MIME` map returning `{ kind:'image', mime:... }` for 8 extensions |
+| `miniclaw-ui.js` | Viewer route (~L1598) | Detect image type; read as base64 via `fs.readFileSync` without encoding |
+| `miniclaw-ui.js` | `generateViewerPage` (~L338) | Add `#img-view` branch before binary fallback; render `<img>` with data URI, Download button |
 
 ## Implementation Notes
 

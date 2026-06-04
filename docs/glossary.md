@@ -26,7 +26,7 @@ The OpenClaw Gateway - central server that routes messages to agents and manages
 
 **Protocol:** WebSocket
 
-### DeepClaw UI
+### MiniClaw UI
 
 The web-based dashboard for monitoring and interacting with the OpenClaw system.
 

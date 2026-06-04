@@ -1,6 +1,6 @@
 # Task Index
 
-This file tracks all tasks, features, and changes made to the DeepClaw UI project.
+This file tracks all tasks, features, and changes made to the MiniClaw UI project.
 
 ## Active Tasks
 
@@ -34,7 +34,7 @@ This file tracks all tasks, features, and changes made to the DeepClaw UI projec
 - **[fix-sessions-create-reason-field](fix-sessions-create-reason-field.md)** (2026-06-01) — Fixed "Start new session" dialog failing after gateway updated `sessions.changed` payload from `state` to `reason` field.
 - **[add-download-button-to-viewer](add-download-button-to-viewer.md)** (2026-05-31) — Client-side Download button in file viewer tabs (code + markdown). Uses Blob from embedded page content for instant download without re-fetching.
 - **[agent-specific-theming](agent-specific-theming.md)** (2026-05-31) — Subtle per-agent accent color theming. Each agent gets a deterministic hue from the blue-purple range (225-255°) applied via CSS `--accent` variable on session switch. Persisted in localStorage.
-- **[fix-agent-tool-events](fix-agent-tool-events.md)** (2026-05-31) — Fixed tool events not rendering after OpenClaw v2026.5.28 update. Tools now arrive via `agent` event (not `session.tool`) when deepclaw-ui is registered as a `toolEventRecipient`.
+- **[fix-agent-tool-events](fix-agent-tool-events.md)** (2026-05-31) — Fixed tool events not rendering after OpenClaw v2026.5.28 update. Tools now arrive via `agent` event (not `session.tool`) when miniclaw-ui is registered as a `toolEventRecipient`.
 
 ---
 

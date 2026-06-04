@@ -1,11 +1,11 @@
 {
-  "name": "deepclaw-ui",
+  "name": "miniclaw-ui",
   "version": "1.0.0",
-  "description": "DeepClaw UI - An alternative web interface for OpenClaw gateway traffic monitoring and session management",
-  "main": "deepclaw-ui.js",
+  "description": "MiniClaw UI - A lightweight web interface for OpenClaw gateway traffic monitoring and session management",
+  "main": "miniclaw-ui.js",
   "scripts": {
-    "start": "node deepclaw-ui.js",
-    "dev": "node deepclaw-ui.js"
+    "start": "node miniclaw-ui.js",
+    "dev": "node miniclaw-ui.js"
   },
   "keywords": [
     "openclaw",

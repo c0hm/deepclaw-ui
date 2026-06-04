@@ -11,7 +11,7 @@ Subtly change the UI accent color based on which agent's session is active. Each
 
 - Only `--accent` CSS variable changes (hue shift only)
 - Deterministic color generation via djb2 hash of agent name → hue in range 225-255°
-- localStorage stores `{agentName: {hue}}` map under key `deepclaw-ui-agent-themes`
+- localStorage stores `{agentName: {hue}}` map under key `miniclaw-ui-agent-themes`
 - Applied on session switch (both `showSession()` and new session creation)
 - Cleared when no session is active
 - Restored on page load if `_lastActiveSession` exists
@@ -21,7 +21,7 @@ Subtly change the UI accent color based on which agent's session is active. Each
 ### index.html
 
 1. **New Section 2b** — Agent theme functions (after prefs, before rAF throttle):
-   - `_AGENT_THEMES_KEY = 'deepclaw-ui-agent-themes'`
+   - `_AGENT_THEMES_KEY = 'miniclaw-ui-agent-themes'`
    - `hashAgentName(name)` — djb2 hash
    - `agentHueFromName(name)` — hash → hue in 225-255
    - `loadAgentThemes()` / `saveAgentThemes(themes)` — localStorage persistence

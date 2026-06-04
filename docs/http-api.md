@@ -1,6 +1,6 @@
 # HTTP REST API
 
-Base: `http://localhost:1234` | Auth: HTTP Basic (password: `DCPASS` env or `deepclaw`)
+Base: `http://localhost:1234` | Auth: HTTP Basic (password: `MCPASS` env or `miniclaw`)
 
 ## Endpoints
 
@@ -21,7 +21,7 @@ All endpoints include `Access-Control-Allow-Origin: *`.
 
 ```bash
 curl -u :password http://localhost:1234/api/status
-# Empty username, password is DCPASS or "deepclaw"
+# Empty username, password is MCPASS or "miniclaw"
 ```
 
 ## Related

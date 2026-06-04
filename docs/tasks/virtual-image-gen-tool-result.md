@@ -270,7 +270,7 @@ if (!resolved.startsWith(MEDIA_ALLOWED_PREFIX)) return 403;
 
 ## Final Architecture: Option A + Option 2
 
-### Backend (`deepclaw-ui.js`)
+### Backend (`miniclaw-ui.js`)
 
 #### 1. New state
 ```javascript
@@ -701,7 +701,7 @@ The same pattern applies. Differences:
 1. **Happy path:** Send an image generation request → verify virtual `tool_result` appears with completed status
 2. **Image rendering:** Verify the image loads inline in the UI
 3. **Page reload:** Reload browser → verify image still shows
-4. **Server restart:** Restart deepclaw-ui → reload browser → verify image still shows
+4. **Server restart:** Restart miniclaw-ui → reload browser → verify image still shows
 5. **Error path:** Force an image generation failure → verify failed status with red styling
 6. **Dedup:** Send two completions for the same taskId → verify only one virtual event
 7. **Multiple generations:** Generate two images → verify both show completed

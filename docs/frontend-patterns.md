@@ -1,6 +1,6 @@
 # Frontend Implementation Patterns
 
-> **Common patterns and conventions used in the DeepClaw UI codebase**  
+> **Common patterns and conventions used in the MiniClaw UI codebase**  
 > Reference for coder agents working on this project
 
 ---
@@ -157,7 +157,7 @@ document.addEventListener('click', function(e) {
 ```
 
 ### Key Points
-- `_expandedItems` is persisted in localStorage under `deepclaw-ui-prefs`
+- `_expandedItems` is persisted in localStorage under `miniclaw-ui-prefs`
 - Changing an expand item triggers a full re-render (`_renderedCount = 0`)
 - Special case: `update_plan` tool results are NEVER programmatically expanded
 - `forceExpand` parameter bypasses the decision and renders expanded
@@ -313,7 +313,7 @@ Rendered at the top of the event list when session is truncated and more events 
 
 ### Implementation
 ```js
-const _PREFS_KEY = 'deepclaw-ui-prefs';
+const _PREFS_KEY = 'miniclaw-ui-prefs';
 
 function savePrefs() {
   try {

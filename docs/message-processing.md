@@ -56,8 +56,8 @@ if (role === 'user' && textContent) {
 
 ### agent events (OpenClaw v2026.5.28+) → Frontend events
 
-The gateway registers deepclaw-ui as a `toolEventRecipient` when forwarding
-browser chat messages via `sessions.send`. This causes deepclaw-ui to receive
+The gateway registers miniclaw-ui as a `toolEventRecipient` when forwarding
+browser chat messages via `sessions.send`. This causes miniclaw-ui to receive
 tool events through the `agent` event (targeted to `runToolRecipients`) instead
 of `session.tool` (which excludes `runToolRecipients` from the broadcast).
 

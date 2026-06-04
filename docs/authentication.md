@@ -2,22 +2,22 @@
 
 ## Overview
 
-DeepClaw UI requires HTTP Basic Authentication on **all** HTTP endpoints. Auth is **always enabled** and cannot be disabled.
+MiniClaw UI requires HTTP Basic Authentication on **all** HTTP endpoints. Auth is **always enabled** and cannot be disabled.
 
 ## Password
 
-Set the `DCPASS` environment variable to change the password:
+Set the `MCPASS` environment variable to change the password:
 
 ```bash
 # Custom password
-DCPASS=mypassword node deepclaw-ui.js
+MCPASS=mypassword node miniclaw-ui.js
 ```
 
-**Default password:** `deepclaw` (when `DCPASS` not set or empty):
+**Default password:** `miniclaw` (when `MCPASS` not set or empty):
 
 ```bash
-# Uses default password "deepclaw"
-node deepclaw-ui.js
+# Uses default password "miniclaw"
+node miniclaw-ui.js
 ```
 
 ## How It Works
@@ -25,7 +25,7 @@ node deepclaw-ui.js
 ### Server-Side
 
 ```javascript
-const DCPASS = process.env.DCPASS || 'deepclaw';  // default is 'deepclaw'
+const MCPASS = process.env.MCPASS || 'miniclaw';  // default is 'miniclaw'
 const authEnabled = true;  // always enabled, unconditionally
 
 // Shared Basic Auth validation — used by both HTTP and WebSocket paths
@@ -35,7 +35,7 @@ function validateBasicAuth(authHeader) {
   try {
     const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
     const [, password] = credentials.split(':');
-    return password === DCPASS;
+    return password === MCPASS;
   } catch {
     return false;
   }
@@ -49,7 +49,7 @@ if (authEnabled) {  // always true
   if (!validateBasicAuth(req.headers['authorization'])) {
     res.writeHead(401, {
       'Content-Type': 'text/plain',
-      'WWW-Authenticate': 'Basic realm="DeepClaw UI"'
+      'WWW-Authenticate': 'Basic realm="MiniClaw UI"'
     });
     res.end('401 Unauthorized');
     return;
@@ -71,8 +71,8 @@ const wss = new WebSocket.Server({
 **Key notes:**
 - Auth validation is shared between HTTP and WebSocket via `validateBasicAuth()`
 - `verifyClient` blocks unauthenticated WebSocket upgrades with HTTP 401
-- `authEnabled = true` — always on, not conditional on `DCPASS` being set
-- Default password is inline in the `DCPASS` declaration: `process.env.DCPASS || 'deepclaw'`
+- `authEnabled = true` — always on, not conditional on `MCPASS` being set
+- Default password is inline in the `MCPASS` declaration: `process.env.MCPASS || 'miniclaw'`
 
 ## Client-Side
 
@@ -80,7 +80,7 @@ const wss = new WebSocket.Server({
 
 ```bash
 # With default password
-curl -u :deepclaw http://localhost:1234/api/status
+curl -u :miniclaw http://localhost:1234/api/status
 
 # With custom password
 curl -u :mypassword http://localhost:1234/api/status
@@ -107,18 +107,18 @@ WebSocket connections (browser ↔ server) are authenticated via the **same Basi
 | Token | `OPENCLAW_TOKEN` is separate from UI password — used for Gateway auth |
 | Auth toggle | Auth **cannot be disabled** — always enforced |
 | WebSocket auth | WebSocket connections require same Basic Auth as HTTP — enforced via `verifyClient` |
-| Password rotation | Changing `DCPASS` and restarting **immediately revokes** all existing clients; they must re-authenticate |
+| Password rotation | Changing `MCPASS` and restarting **immediately revokes** all existing clients; they must re-authenticate |
 
 ## API Keys vs Password
 
-- **UI Password** (`DCPASS`): Protects the web UI and REST API
+- **UI Password** (`MCPASS`): Protects the web UI and REST API
 - **Gateway Token** (`OPENCLAW_TOKEN` or `~/.openclaw/openclaw.json`): Authenticates to OpenClaw Gateway via `auth.token` in connect params. When device identity files are missing, the UI falls back to **token-only auth** (no device signing required).
 - **Device Token** (`operatorToken`): Loaded from `device-auth.json`, sent as `auth.deviceToken` in connect params
 
 All three can be used together:
 
 ```bash
-OPENCLAW_TOKEN=gw_token DCPASS=ui_pass node deepclaw-ui.js
+OPENCLAW_TOKEN=gw_token MCPASS=ui_pass node miniclaw-ui.js
 ```
 
 ## Related Documentation

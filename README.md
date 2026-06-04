@@ -1,4 +1,4 @@
-# 🐚 DeepClaw UI
+# 🐚 MiniClaw UI
 
 > Real-time web dashboard for the OpenClaw Gateway. Watch agent sessions unfold, inspect tool calls and LLM reasoning, track token usage, chat with agents, and share files — all from a browser.
 
@@ -10,7 +10,7 @@
 
 ## ✨ What It Does
 
-DeepClaw UI connects to your OpenClaw Gateway via WebSocket and streams every session event to your browser in real time. You get a live, scrollable feed of every agent action — tool calls, model reasoning, assistant responses, errors, and token costs — as they happen.
+MiniClaw UI connects to your OpenClaw Gateway via WebSocket and streams every session event to your browser in real time. You get a live, scrollable feed of every agent action — tool calls, model reasoning, assistant responses, errors, and token costs — as they happen.
 
 **Watch** agent sessions in real time. **Inspect** tool calls and their results with syntax-highlighted inputs and outputs. **Read** LLM thinking traces and assistant responses with full markdown rendering. **Track** token usage and estimated costs per session. **Chat** with any agent directly from the UI. **Share** files via one-shot secure URLs with an inline code viewer.
 
@@ -23,10 +23,10 @@ DeepClaw UI connects to your OpenClaw Gateway via WebSocket and streams every se
 npm install
 
 # Run (all defaults)
-node deepclaw-ui.js
+node miniclaw-ui.js
 
 # Open → http://localhost:1234
-# Password → deepclaw
+# Password → miniclaw
 ```
 
 That's it. The server auto-connects to your Gateway at `ws://127.0.0.1:18789`, loads device identity if available, and starts streaming.
@@ -36,7 +36,7 @@ That's it. The server auto-connects to your Gateway at `ws://127.0.0.1:18789`, l
 ## 📸 What You'll See
 
 <p align="center">
-  <img src="preview.png" alt="DeepClaw UI screenshot" width="800">
+  <img src="preview.png" alt="MiniClaw UI screenshot" width="800">
 </p>
 
 | Area | What's There |
@@ -74,7 +74,7 @@ All via environment variables. No config files needed.
 |----------|---------|---------|
 | `PORT` | `1234` | HTTP server port |
 | `OPENCLAW_TOKEN` | auto-loaded | Gateway auth token (falls back to `~/.openclaw/openclaw.json`) |
-| `DCPASS` | `deepclaw` | UI password (Basic Auth **always on**) |
+| `MCPASS` | `miniclaw` | UI password (Basic Auth **always on**; `DCPASS` still supported for backward compat) |
 | `DATA_DIR` | `./data` | Session persistence directory |
 | `GW_WSS` | `false` | Set to `true` for secure WebSocket (`wss://`) to Gateway |
 
@@ -82,12 +82,12 @@ All via environment variables. No config files needed.
 # Production example
 PORT=1234 \
 OPENCLAW_TOKEN=your_token \
-DCPASS=strong_password \
-DATA_DIR=/var/lib/deepclaw-ui/data \
-node deepclaw-ui.js
+MCPASS=strong_password \
+DATA_DIR=/var/lib/miniclaw-ui/data \
+node miniclaw-ui.js
 
 # Gateway over TLS
-GW_WSS=true node deepclaw-ui.js
+GW_WSS=true node miniclaw-ui.js
 ```
 
 ### TLS / HTTPS
@@ -100,7 +100,7 @@ Drop `fullchain.pem` and `privkey.pem` in the project root and the server auto-s
 
 ```
 ┌──────────────┐     WebSocket      ┌──────────────────┐     WebSocket      ┌──────────┐
-│   Gateway    │ ◄────────────────► │  deepclaw-ui.js   │ ◄────────────────► │ Browser  │
+│   Gateway    │ ◄────────────────► │  miniclaw-ui.js   │ ◄────────────────► │ Browser  │
 │  :18789      │   session events,  │  :1234            │   events, sync,   │  (SPA)   │
 │              │   messages, tokens │                   │   status, chat    │          │
 └──────────────┘                    └──────────────────┘                    └──────────┘
@@ -154,7 +154,7 @@ Full REST API for automation and external tooling.
 |--------|----------|-------------|
 | `GET` | `/api/agents` | Available agents from Gateway config |
 
-All endpoints require HTTP Basic Auth (password: `deepclaw` or `DCPASS`).
+All endpoints require HTTP Basic Auth (password: `miniclaw` or `MCPASS`).
 
 ---
 
@@ -202,8 +202,8 @@ When running interactively (stdin):
 ## 🗂️ Project Structure
 
 ```
-deepclaw-ui/
-├── deepclaw-ui.js      # Server: Gateway WS + HTTP + Browser WS + session state
+miniclaw-ui/
+├── miniclaw-ui.js      # Server: Gateway WS + HTTP + Browser WS + session state
 ├── index.html          # Frontend: vanilla JS SPA (3776 lines)
 ├── docs/               # Full documentation (17 files)
 │   ├── index.md                        # Architecture overview (LLM-optimized)
@@ -252,7 +252,7 @@ deepclaw-ui/
 | Problem | Likely Fix |
 |---------|-----------|
 | "Connecting to gateway..." stuck | Gateway not running on `:18789`; check `GW_WSS=true` if TLS |
-| 401 Unauthorized | Password is `deepclaw` (or your `DCPASS` value) |
+| 401 Unauthorized | Password is `miniclaw` (or your `MCPASS` value) |
 | No sessions listed | Send a message — sessions are created on first interaction |
 | Empty event feed | Click a session; events stream via WebSocket push, not on-demand fetch |
 | Scroll stuck / "New messages" button | Scroll to bottom manually or clear filters |
@@ -261,10 +261,10 @@ deepclaw-ui/
 
 ```bash
 # Quick health check
-curl -u :deepclaw http://localhost:1234/api/status
+curl -u :miniclaw http://localhost:1234/api/status
 
 # Nuclear option
-rm -rf data/*.json && node deepclaw-ui.js
+rm -rf data/*.json && node miniclaw-ui.js
 ```
 
 ---
@@ -286,7 +286,7 @@ Key docs by topic:
 
 ## 🤖 Agent-Ready
 
-This repo includes an [`AGENT.md`](AGENT.md) that turns any coder agent into a productive DeepClaw UI developer on first read. It contains:
+This repo includes an [`AGENT.md`](AGENT.md) that turns any coder agent into a productive MiniClaw UI developer on first read. It contains:
 
 - **Full architecture diagram** with data flow
 - **Complete source layout** — every section of both source files (1838 + 3776 lines) mapped by line range with descriptions

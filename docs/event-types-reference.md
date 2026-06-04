@@ -450,7 +450,7 @@ Create or overwrite a file.
 
 ```json
 {
-  "path": "/home/ju/deepclaw-ui/docs/event-types-reference.md",
+  "path": "/home/ju/miniclaw-ui/docs/event-types-reference.md",
   "content": "# Event Types Reference\n\n..."
 }
 ```
@@ -468,7 +468,7 @@ Make precise edits to an existing file.
 
 ```json
 {
-  "path": "/home/ju/deepclaw-ui/index.html",
+  "path": "/home/ju/miniclaw-ui/index.html",
   "edits": [
     {
       "oldText": "</body>\n</html>",
@@ -498,7 +498,7 @@ Execute shell commands.
 ```json
 {
   "command": "git status",
-  "workdir": "/home/ju/deepclaw-ui",
+  "workdir": "/home/ju/miniclaw-ui",
   "background": true,
   "yieldMs": 3000,
   "timeout": 60
@@ -552,7 +552,7 @@ Spawn a new agent session (subagent).
   "task": "Rewrite the documentation for the websocket client",
   "taskName": "rewrite-docs",
   "model": "deepseek/deepseek-v4-pro",
-  "cwd": "/home/ju/deepclaw-ui",
+  "cwd": "/home/ju/miniclaw-ui",
   "context": "fork"
 }
 ```
@@ -590,7 +590,7 @@ Search memory files.
 
 ```json
 {
-  "query": "deepclaw-ui websocket implementation",
+  "query": "miniclaw-ui websocket implementation",
   "maxResults": 5,
   "minScore": 0.5,
   "corpus": "all"
@@ -785,7 +785,7 @@ Results vary by tool. Most results are envelopes parsed by `parseToolResult()`:
   ],
   "details": {
     "durationMs": 1234,
-    "cwd": "/home/ju/deepclaw-ui",
+    "cwd": "/home/ju/miniclaw-ui",
     "exitCode": 0,
     "diff": "...",
     "edits": [...],

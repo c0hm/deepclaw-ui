@@ -1,12 +1,12 @@
 #!/bin/bash
-# DeepClaw UI installer — interactive setup + systemd user service
+# MiniClaw UI installer — interactive setup + systemd user service
 set -e
 
 cd "$(dirname "$0")"
 SCRIPT_DIR="$(pwd)"
 
 echo "═══════════════════════════════════════════"
-echo "  🐚 DeepClaw UI Installer"
+echo "  🐚 MiniClaw UI Installer"
 echo "═══════════════════════════════════════════"
 echo ""
 
@@ -15,8 +15,8 @@ read -r -p "Port [1234]: " PORT
 PORT="${PORT:-1234}"
 
 # ── Password ──────────────────────────────────
-read -r -p "Dashboard password [deepclaw]: " DCPASS
-DCPASS="${DCPASS:-deepclaw}"
+read -r -p "Dashboard password [miniclaw]: " MCPASS
+MCPASS="${MCPASS:-miniclaw}"
 
 # ── WSS (optional) ────────────────────────────
 read -r -p "Use WSS for gateway connection? (y/N): " WSS_ANS
@@ -29,7 +29,7 @@ fi
 echo ""
 echo "───────────────────────────────────────────"
 echo "  Port:        $PORT"
-echo "  Password:    $DCPASS"
+echo "  Password:    $MCPASS"
 echo "  Gateway WSS: $GW_WSS"
 echo "  Directory:   $SCRIPT_DIR"
 echo "───────────────────────────────────────────"
@@ -51,19 +51,19 @@ npm install --production
 echo "📝 Updating restart.sh…"
 cat > "$SCRIPT_DIR/restart.sh" <<RESTART
 #!/bin/bash
-# Restart deepclaw-ui with current environment variables
+# Restart miniclaw-ui with current environment variables
 
 cd "$SCRIPT_DIR"
 
 # Kill existing process
-pkill -f "node.*deepclaw-ui.js" 2>/dev/null
+pkill -f "node.*miniclaw-ui.js" 2>/dev/null
 sleep 1
 
 # Start with configured env vars
 PORT="${PORT}" \\
-DCPASS="${DCPASS}" \\
+MCPASS="${MCPASS}" \\
 GW_WSS="${GW_WSS}" \\
-node deepclaw-ui.js
+node miniclaw-ui.js
 RESTART
 chmod +x "$SCRIPT_DIR/restart.sh"
 
@@ -71,14 +71,14 @@ chmod +x "$SCRIPT_DIR/restart.sh"
 echo "📝 Creating systemd user service…"
 mkdir -p "$HOME/.config/systemd/user"
 
-cat > "$HOME/.config/systemd/user/deepclaw-ui.service" <<UNIT
+cat > "$HOME/.config/systemd/user/miniclaw-ui.service" <<UNIT
 [Unit]
-Description=DeepClaw UI Dashboard
+Description=MiniClaw UI Dashboard
 After=network-online.target openclaw-gateway.service
 Wants=network-online.target openclaw-gateway.service
 
 [Service]
-ExecStart=/usr/bin/node $SCRIPT_DIR/deepclaw-ui.js
+ExecStart=/usr/bin/node $SCRIPT_DIR/miniclaw-ui.js
 WorkingDirectory=$SCRIPT_DIR
 Restart=always
 RestartSec=5
@@ -86,7 +86,7 @@ TimeoutStopSec=10
 TimeoutStartSec=30
 
 Environment=PORT=$PORT
-Environment=DCPASS=$DCPASS
+Environment=MCPASS=$MCPASS
 Environment=GW_WSS=$GW_WSS
 Environment=HOME=$HOME
 Environment=PATH=/usr/bin:$HOME/.local/bin:$HOME/.npm-global/bin:/usr/local/bin
@@ -98,14 +98,14 @@ UNIT
 # ── Enable & start ────────────────────────────
 echo "🔧 Reloading systemd, enabling & starting…"
 systemctl --user daemon-reload
-systemctl --user enable --now deepclaw-ui
+systemctl --user enable --now miniclaw-ui
 
 echo ""
 echo "═══════════════════════════════════════════"
-echo "  ✅ DeepClaw UI installed!"
+echo "  ✅ MiniClaw UI installed!"
 echo ""
 echo "  Dashboard:  http://localhost:$PORT"
-echo "  Password:   $DCPASS"
-echo "  Service:    systemctl --user status deepclaw-ui"
-echo "  Logs:       journalctl --user -u deepclaw-ui -f"
+echo "  Password:   $MCPASS"
+echo "  Service:    systemctl --user status miniclaw-ui"
+echo "  Logs:       journalctl --user -u miniclaw-ui -f"
 echo "═══════════════════════════════════════════"

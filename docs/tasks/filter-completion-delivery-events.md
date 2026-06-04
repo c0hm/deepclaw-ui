@@ -112,9 +112,9 @@ events.forEach(ev => {
 
 ## What Changes
 
-### Backend (`deepclaw-ui.js`)
+### Backend (`miniclaw-ui.js`)
 
-**File:** `deepclaw-ui.js`
+**File:** `miniclaw-ui.js`
 **Section:** `handleGatewayMessage` event loop (around line ~2065)
 
 Changes:

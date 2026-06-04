@@ -9,7 +9,7 @@ The "Start New Session" modal dialog was showing "⚠️ Failed" for all new ses
 
 ## Root Cause
 
-The OpenClaw Gateway changed the `sessions.changed` event payload from using `state: "created"` to `reason: "create"`. Both the deepclaw-ui backend (`deepclaw-ui.js`) and frontend (`index.html`) were checking for `state === 'created'` (or `phase === 'created'`) but the gateway now sends `reason: "create"`.
+The OpenClaw Gateway changed the `sessions.changed` event payload from using `state: "created"` to `reason: "create"`. Both the miniclaw-ui backend (`miniclaw-ui.js`) and frontend (`index.html`) were checking for `state === 'created'` (or `phase === 'created'`) but the gateway now sends `reason: "create"`.
 
 The same issue affected session deletion events: the gateway sends `reason: "deleted"` instead of `state: "deleted"/"ended"`.
 
@@ -28,7 +28,7 @@ The same issue affected session deletion events: the gateway sends `reason: "del
 
 Added `reason` field checks alongside existing `state`/`phase` checks:
 
-### Backend (`deepclaw-ui.js`) — 3 changes
+### Backend (`miniclaw-ui.js`) — 3 changes
 
 1. **Line ~1619** — Session deletion handler: Added `reason === 'deleted' || reason === 'ended'` check
 2. **Line ~1651** — Deleted sessions guard: Added `reason === 'create'` check to allow re-creation

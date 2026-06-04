@@ -1,6 +1,6 @@
 # UI Components & Layout Reference
 
-> **Complete reference for the DeepClaw UI DOM structure, global state, and interactive components**
+> **Complete reference for the MiniClaw UI DOM structure, global state, and interactive components**
 
 ---
 
@@ -10,7 +10,7 @@
 <body>
   #header
     #sidebar-toggle (‹/› button)
-    h1 "DeepClaw UI"
+    h1 "MiniClaw UI"
     #status
       .dot (connected|disconnected)
       #conn-status (text)
@@ -143,7 +143,7 @@ All are `let` variables in the top-level script scope (Section 1, lines ~335–3
 
 ### Default & Persistence
 - Default filter: `minimal` (on first launch when no saved preference)
-- User's last selected filter is persisted to `localStorage` (`deepclaw-ui-prefs.filter`) and restored on reload.
+- User's last selected filter is persisted to `localStorage` (`miniclaw-ui-prefs.filter`) and restored on reload.
 
 ### Always Hidden
 `run_end` events are **always filtered** out:
@@ -475,7 +475,7 @@ Clicking any event badge or the `{ } JSON` button on tool call/result headers.
 ## Input History Modal
 
 ### Storage
-- `localStorage` key: `'deepclaw-ui-input-history'`
+- `localStorage` key: `'miniclaw-ui-input-history'`
 - Max items: 50
 - Deduplicated (recent entry moved to top)
 
@@ -647,5 +647,5 @@ function isSeenMessage(sess, role, content) {
 
 | Key | Content | Updated By |
 |---|---|---|
-| `deepclaw-ui-prefs` | `{ filtersVisible, expandedItems, lastActiveSession, sidebarCollapsed }` | `savePrefs()` |
-| `deepclaw-ui-input-history` | `string[]` (max 50) | `saveInputToHistory()` |
+| `miniclaw-ui-prefs` | `{ filtersVisible, expandedItems, lastActiveSession, sidebarCollapsed }` | `savePrefs()` |
+| `miniclaw-ui-input-history` | `string[]` (max 50) | `saveInputToHistory()` |

@@ -15,7 +15,7 @@ Added a client-side Download button to the viewer page header bar for both code 
 
 ### Changes
 
-**`deepclaw-ui.js` — `generateViewerPage()` (L316-L385):**
+**`miniclaw-ui.js` — `generateViewerPage()` (L316-L385):**
 
 1. **Markdown viewer:** Added `<button class="dl" onclick="downloadFile()">⬇ Download</button>` to header bar + `<script>` block defining `downloadFile()` with content embedded as `window.__FC__`
 

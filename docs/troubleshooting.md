@@ -5,15 +5,15 @@
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | "Connecting to gateway..." stuck | Gateway not on 18789 | Verify Gateway running; check `GW_WSS=true` if TLS |
-| WS connection error | Server not running | `node deepclaw-ui.js`; refresh page |
+| WS connection error | Server not running | `node miniclaw-ui.js`; refresh page |
 | Sessions list empty | No sessions exist | Send a message or click "Test Traffic" |
 
 ## Auth
 
 | Symptom | Fix |
 |---------|-----|
-| 401 Unauthorized | Password is `DCPASS` env value, or `deepclaw` if unset |
-| Repeated prompts | Clear cached credentials; try `DCPASS=` restart |
+| 401 Unauthorized | Password is `MCPASS` env value, or `miniclaw` if unset |
+| Repeated prompts | Clear cached credentials; try `MCPASS=` restart |
 
 ## Sessions
 

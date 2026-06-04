@@ -35,7 +35,7 @@ No explicit `kind`/`type` field distinguishes chat from tool-only agents. All th
 
 **Session key format:** `agent:<agent-id>:main` — confirmed from the hardcoded options (`agent:main:main`, `agent:personal:main`) and the `createNewSession()` code that extracts base from `agent.split(':')[0] + ':' + agent.split(':')[1]`.
 
-### Backend changes (`deepclaw-ui.js`)
+### Backend changes (`miniclaw-ui.js`)
 
 **`/api/agents` endpoint** (lines 843–863):
 - Added `.filter(a => a.model)` to exclude tool-only entries
@@ -68,7 +68,7 @@ const sk = activeSession || (_agentList.length > 0 ? _agentList[0].sessionKey : 
 
 | File | Change |
 |------|--------|
-| `deepclaw-ui.js` L843–863 | `/api/agents`: filter by `.model`, add `sessionKey` field |
+| `miniclaw-ui.js` L843–863 | `/api/agents`: filter by `.model`, add `sessionKey` field |
 | `index.html` L496 | Add `_agentList` global |
 | `index.html` L701 | `ws.onopen`: call `fetchAgentList()` |
 | `index.html` L3070 | `sendNewSession()`: dynamic fallback session key |

@@ -6,7 +6,7 @@
 
 ## Original Bug
 
-"When loading deepclaw-ui fresh if it enters the page at the same time it receives streaming events then it wont load correctly, forced f5 until it can load."
+"When loading miniclaw-ui fresh if it enters the page at the same time it receives streaming events then it wont load correctly, forced f5 until it can load."
 
 ## Root Cause Analysis
 
@@ -137,7 +137,7 @@ This is the smallest change with the best UX — page loads fast, recent events 
 
 ## Files Affected
 
-- `deepclaw-ui.js` — `wss.on('connection')` handler (line ~1280), `toClientFormat()`, `toClientSummary()`
+- `miniclaw-ui.js` — `wss.on('connection')` handler (line ~1280), `toClientFormat()`, `toClientSummary()`
 - `index.html` — `handleGatewayMsg()` (line ~878), `session.sync` handler (line ~941), `showSessionContent()` (line ~1734)
 
 ## Test Environment

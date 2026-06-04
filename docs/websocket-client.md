@@ -1,6 +1,6 @@
 # Browser WebSocket Client
 
-The frontend connects to the deepclaw-ui backend server via WebSocket. This document covers the actual connection lifecycle, all message types sent and received, and the deduplication system — all as implemented in `index.html`.
+The frontend connects to the miniclaw-ui backend server via WebSocket. This document covers the actual connection lifecycle, all message types sent and received, and the deduplication system — all as implemented in `index.html`.
 
 ---
 

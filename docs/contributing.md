@@ -1,8 +1,8 @@
-# Contributing to DeepClaw UI
+# Contributing to MiniClaw UI
 
 ## Start Here: `AGENT.md`
 
-**Before you write a single line of code, read `AGENT.md` in the project root.** It's the developer bootstrap — architecture diagrams, source layout by line number, event flow, dedup behavior, session lifecycle, edge cases, and gotchas. It turns any coder (human or agent) into a productive DeepClaw UI developer in one read.
+**Before you write a single line of code, read `AGENT.md` in the project root.** It's the developer bootstrap — architecture diagrams, source layout by line number, event flow, dedup behavior, session lifecycle, edge cases, and gotchas. It turns any coder (human or agent) into a productive MiniClaw UI developer in one read.
 
 This document covers how to contribute. `AGENT.md` covers how the code works.
 
@@ -26,7 +26,7 @@ This is a **zero-framework** project. No React, no Vue, no Express. Just Node.js
 - **ES6+** — use `const` by default, `let` when reassigning, never `var`
 - **Descriptive names** — `getSessionDataPath()` not `gsp()`, `convertToFrontendEvent()` not `cvt()`
 - **Comment the why, not the what** — the code says what; comments explain edge cases, workarounds, and intent
-- **Section headers** — `deepclaw-ui.js` uses `// === Section Name ===` blocks; follow that pattern
+- **Section headers** — `miniclaw-ui.js` uses `// === Section Name ===` blocks; follow that pattern
 - **Line length** — no hard limit, but keep it readable. The file is already 1800+ lines; don't make it worse
 - **No new dependencies** — the only runtime dep is `ws`. Every dependency adds surface area; justify it hard
 
@@ -43,11 +43,11 @@ There is no test suite. Testing is manual.
 
 ```bash
 # Start the server
-node deepclaw-ui.js
+node miniclaw-ui.js
 
 # Hit the API
-curl -u :deepclaw http://localhost:1234/api/status
-curl -u :deepclaw http://localhost:1234/api/sessions
+curl -u :miniclaw http://localhost:1234/api/status
+curl -u :miniclaw http://localhost:1234/api/sessions
 
 # Load the UI in a browser
 # http://localhost:1234
@@ -74,11 +74,11 @@ Include:
 1. **Steps to reproduce** — exact curl commands or UI clicks
 2. **Expected behavior** — what should happen
 3. **Actual behavior** — what actually happens (logs, screenshots, error messages)
-4. **Environment** — Node version, OS, Gateway status, any custom env vars (`PORT`, `DCPASS`, `GW_WSS`)
+4. **Environment** — Node version, OS, Gateway status, any custom env vars (`PORT`, `MCPASS`, `GW_WSS`)
 
 ### Where to look for clues
 
-- **Server logs** — `deepclaw-ui.js` prints to stdout
+- **Server logs** — `miniclaw-ui.js` prints to stdout
 - **Browser console** — the frontend logs connection state and event processing
 - **Session data** — `data/session-{key}.json` has the raw event storage
 - **Gateway status** — is the Gateway running and reachable at `ws://127.0.0.1:18789`?

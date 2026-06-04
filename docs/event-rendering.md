@@ -558,7 +558,7 @@ Each compact row has:
 
 ### State: `_expandedItems` Set
 - **Default:** `new Set(['user', 'response'])` — user messages and responses always expanded
-- **Stored in:** `localStorage` under `deepclaw-ui-prefs.expandedItems`
+- **Stored in:** `localStorage` under `miniclaw-ui-prefs.expandedItems`
 - **Keys:** Tool names (`'exec'`, `'read'`, etc.) + message types (`'thinking'`, `'user'`, `'response'`)
 
 ### `isExpanded(ev)`

@@ -2,7 +2,7 @@
 
 ## Overview
 
-DeepClaw UI supports interactive commands via stdin when running in a terminal.
+MiniClaw UI supports interactive commands via stdin when running in a terminal.
 
 ## Available Commands
 
@@ -12,7 +12,7 @@ Shows server status:
 
 ```
 > status
-=== DeepClaw UI v2 Status ===
+=== MiniClaw UI v2 Status ===
 Gateway: connected
 Sessions: 3
 Browser clients: 2
@@ -81,9 +81,9 @@ Commands: status, sessions, events, gc, reset, help
 Commands are entered in the terminal where the server is running:
 
 ```bash
-$ node deepclaw-ui.js
-[1234567890] [info] DeepClaw UI v2 running at http://0.0.0.0:1234/
-[1234567890] [info] Data directory: /home/ju/deepclaw-ui/data
+$ node miniclaw-ui.js
+[1234567890] [info] MiniClaw UI v2 running at http://0.0.0.0:1234/
+[1234567890] [info] Data directory: /home/ju/miniclaw-ui/data
 # Type commands here:
 status
 sessions
@@ -100,7 +100,7 @@ process.stdin.on('data', (line) => {
   const cmd = line.trim().toLowerCase();
   
   if (cmd === 'status') {
-    console.log('\n=== DeepClaw UI v2 Status ===');
+    console.log('\n=== MiniClaw UI v2 Status ===');
     console.log('Gateway:', gwReady ? 'connected' : 'disconnected');
     console.log('Sessions:', sessions.size);
     console.log('Browser clients:', clients.size);
