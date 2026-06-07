@@ -286,7 +286,7 @@ Key docs by topic:
 
 ## 🤖 Agent-Ready
 
-This repo includes an [`AGENT.md`](AGENT.md) that turns any coder agent into a productive MiniClaw UI developer on first read. It contains:
+This repo includes an [`AGENTS.md`](AGENTS.md) that turns any coder agent into a productive MiniClaw UI developer on first read. It contains:
 
 - **Full architecture diagram** with data flow
 - **Complete source layout** — every section of both source files (1838 + 3776 lines) mapped by line range with descriptions
