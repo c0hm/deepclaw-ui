@@ -15,7 +15,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "puppeteer": "^24.41.0",
     "ws": "^8.20.0"
   }
 }
