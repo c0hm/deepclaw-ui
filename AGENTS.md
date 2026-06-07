@@ -1,4 +1,4 @@
-# AGENT.md — MiniClaw UI Developer Bootstrap
+# AGENTS.md — MiniClaw UI Developer Bootstrap
 
 _This file turns any coder agent into a productive MiniClaw UI developer. Read it once, know the project._
 
